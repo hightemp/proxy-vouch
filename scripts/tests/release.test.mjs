@@ -351,7 +351,7 @@ test("upload failures leave drafts unpublished and published releases are immuta
     () =>
       publishGithubRelease(
         root,
-        "example/proxy-pulse",
+        "example/proxy-vouch",
         "v0.1.0",
         directory,
         () => ({ status: 0, stdout: JSON.stringify({ isDraft: false }) }),
