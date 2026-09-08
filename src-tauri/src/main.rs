@@ -2,7 +2,7 @@
 
 mod startup;
 
-use proxy_pulse_core::{
+use proxy_vouch_core::{
     export::{self, ExportOptions, Payload},
     model::{AppError, AppResult, CheckSettings},
     parser::{ImportOptions, MAX_BYTES},
@@ -164,7 +164,7 @@ async fn export_data(
                     .dialog()
                     .file()
                     .set_file_name(format!(
-                        "proxy-pulse-{}.{}",
+                        "proxy-vouch-{}.{}",
                         options.scope.to_lowercase(),
                         extension
                     ))
@@ -239,8 +239,8 @@ async fn export_backup(
         let Some(file) = app
             .dialog()
             .file()
-            .set_file_name("proxy-pulse-backup.json")
-            .add_filter("Proxy Pulse backup", &["json"])
+            .set_file_name("proxy-vouch-backup.json")
+            .add_filter("ProxyVouch backup", &["json"])
             .blocking_save_file()
         else {
             return Ok(false);
@@ -290,7 +290,7 @@ async fn preview_backup(
         let Some(file) = app
             .dialog()
             .file()
-            .add_filter("Proxy Pulse backup", &["json"])
+            .add_filter("ProxyVouch backup", &["json"])
             .blocking_pick_file()
         else {
             return Ok(None);
@@ -410,7 +410,7 @@ fn main() {
         })
         .run(tauri::generate_context!());
     if result.is_err() {
-        eprintln!("Proxy Pulse could not start. Verify the desktop runtime dependencies.");
+        eprintln!("ProxyVouch could not start. Verify the desktop runtime dependencies.");
         std::process::exit(1);
     }
 }

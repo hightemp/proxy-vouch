@@ -28,10 +28,10 @@ The separate TCP timeout check filled a loopback listener's Linux `listen(0)` ac
 Commands used for the repeatable suite:
 
 ```sh
-cargo build -p proxy-pulse-core --example check --locked
+cargo build -p proxy-vouch-core --example check --locked
 python3 scripts/network_fixtures.py
-cargo test -p proxy-pulse-core --locked
-cargo clippy -p proxy-pulse-core --all-targets --locked -- -D warnings
+cargo test -p proxy-vouch-core --locked
+cargo clippy -p proxy-vouch-core --all-targets --locked -- -D warnings
 ```
 
 Local workspace tests, workspace Clippy, Rust formatting, version consistency and `git diff --check` also passed. Protocol reports and the before/after Ubuntu logs were saved under the ignored `artifacts/ubuntu22-timeouts/` directory.

@@ -1,5 +1,5 @@
 use proptest::prelude::*;
-use proxy_pulse_core::{
+use proxy_vouch_core::{
     export::{proxy_url, render, save_atomic, ExportOptions},
     model::{Protocol, Status},
     parser::{parse_import, parse_line, ImportOptions},

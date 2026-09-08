@@ -163,7 +163,7 @@ pub struct RestoreResult {
 fn invalid_backup() -> AppError {
     AppError::new(
         "INVALID_BACKUP",
-        "This is not a valid Proxy Pulse backup. Choose a file exported from Backup & restore.",
+        "This is not a valid ProxyVouch backup. Choose a file exported from Backup & restore.",
     )
 }
 
@@ -204,7 +204,7 @@ impl Backup {
         if header.version != 1 {
             return Err(AppError::new(
                 "BACKUP_VERSION_UNSUPPORTED",
-                "This backup uses an unsupported version. Update Proxy Pulse before importing it.",
+                "This backup uses an unsupported version. Update ProxyVouch before importing it.",
             ));
         }
         let backup: Self = serde_json::from_slice(bytes).map_err(|_| invalid_backup())?;
@@ -434,7 +434,7 @@ impl Store {
             let file = options
                 .open(directory.join("workspace.lock"))
                 .map_err(|_| storage_error())?;
-            file.try_lock().map_err(|_| AppError::new("STORAGE_LOCKED", "Another Proxy Pulse instance is using this folder. Close it and restart this window to enable saving."))?;
+            file.try_lock().map_err(|_| AppError::new("STORAGE_LOCKED", "Another ProxyVouch instance is using this folder. Close it and restart this window to enable saving."))?;
             inner._lock = Some(file);
             let path = directory.join("workspace.json");
             if path.try_exists().map_err(|_| storage_error())? {

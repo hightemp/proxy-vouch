@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Proxy Pulse",
+  "productName": "ProxyVouch",
   "version": "../package.json",
   "identifier": "dev.hightemp.proxypulse",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Proxy Pulse",
+        "title": "ProxyVouch",
         "width": 1320,
         "height": 860,
         "minWidth": 1000,

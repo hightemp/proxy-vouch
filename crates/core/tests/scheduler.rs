@@ -1,4 +1,4 @@
-use proxy_pulse_core::{
+use proxy_vouch_core::{
     model::{CheckSettings, Status},
     parser::ImportOptions,
     session::{self, Session},

@@ -1,4 +1,4 @@
-use proxy_pulse_core::{
+use proxy_vouch_core::{
     model::{CheckResult, CheckSettings, Protocol, Status},
     parser::ImportOptions,
     session::{Session, SharedSession},
@@ -446,7 +446,7 @@ fn saved_credentials_are_only_readable_by_the_owner() {
 fn combined_lists_cannot_exceed_the_row_limit_or_partially_import_settings() {
     let mut target = list("keep.example:8080");
     let entry = target.entries[0].clone();
-    target.entries = vec![entry; proxy_pulse_core::parser::MAX_ROWS];
+    target.entries = vec![entry; proxy_vouch_core::parser::MAX_ROWS];
     let mut source = list("new.example:8080");
     source.set_preferences(custom_preferences()).unwrap();
     let error = Backup::capture(&source, BackupScope::Full)
@@ -455,5 +455,5 @@ fn combined_lists_cannot_exceed_the_row_limit_or_partially_import_settings() {
         .unwrap();
     assert_eq!(error.code, "TOO_MANY_ROWS");
     assert_eq!(target.preferences.theme, "system");
-    assert_eq!(target.entries.len(), proxy_pulse_core::parser::MAX_ROWS);
+    assert_eq!(target.entries.len(), proxy_vouch_core::parser::MAX_ROWS);
 }

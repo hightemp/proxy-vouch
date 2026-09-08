@@ -334,7 +334,7 @@ fn probe(
         easy.ssl_verify_host(true)?;
         easy.proxy_ssl_verify_peer(true)?;
         easy.proxy_ssl_verify_host(true)?;
-        easy.useragent(concat!("ProxyPulse/", env!("CARGO_PKG_VERSION")))?;
+        easy.useragent(concat!("ProxyVouch/", env!("CARGO_PKG_VERSION")))?;
         easy.accept_encoding("")?;
         easy.verbose(true)?;
         if matches!(protocol, Protocol::Socks5 | Protocol::Socks5h) {

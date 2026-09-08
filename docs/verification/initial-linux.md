@@ -38,7 +38,7 @@ The native list initially contained four Working rows, one Failed row and one In
 
 ## Core performance sample
 
-Command: `cargo run -p proxy-pulse-core --example benchmark --release --locked`.
+Command: `cargo run -p proxy-vouch-core --example benchmark --release --locked`.
 
 | Records | Parse, preview and commit | Initial snapshot serialization |
 | --- | --- | --- |
@@ -55,7 +55,7 @@ Generated files are intentionally ignored by Git:
 - `artifacts/native-results.json`: native smoke counters and measured cancellation.
 - `artifacts/public-endpoint-smoke.json`: boolean success evidence without the observed IP.
 - `artifacts/native-results.png`: the real native result table with synthetic proxies.
-- `target/release/proxy-pulse` and `target/release/bundle/deb/Proxy Pulse_0.1.0_amd64.deb`.
+- `target/release/proxy-vouch` and `target/release/bundle/deb/ProxyVouch_0.1.0_amd64.deb`.
 
 The package SHA-256 is `13a26b068f04e286c8511aaee7cea8a647dd2429c17418a41c08d97c2540aa00`; `SHA256SUMS` is written next to it. The standalone and packaged executable have the same ELF build ID; the packaged copy carries Tauri's `DEB` bundle marker instead of `UNK`. The extracted copy was tested directly, without installing it system-wide.
 

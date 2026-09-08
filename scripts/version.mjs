@@ -53,7 +53,7 @@ export function synchronizeVersion(root = projectRoot, check = false) {
   // Only local workspace package versions change; dependency resolutions stay locked.
   const lockFile = path.join(root, "Cargo.lock");
   const lock = fs.readFileSync(lockFile, "utf8");
-  const names = new Set(["proxy-pulse", "proxy-pulse-core"]);
+  const names = new Set(["proxy-vouch", "proxy-vouch-core"]);
   const found = new Set();
   const updatedLock = lock.replace(
     /^\[\[package\]\]\r?\n[\s\S]*?(?=^\[\[package\]\]|$(?![\s\S]))/gm,

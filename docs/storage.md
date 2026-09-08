@@ -1,10 +1,10 @@
 # Local storage and portable backups
 
-Proxy Pulse saves the current workspace by default. This includes the list in import order, original text and table mappings, credentials, invalid rows, last results and their check profiles, full check settings and appearance. Pending imports, selected rows, filters and unfinished settings drafts are not stored. A restart never starts network checks: Queued and Checking records become Cancelled.
+ProxyVouch saves the current workspace by default. This includes the list in import order, original text and table mappings, credentials, invalid rows, last results and their check profiles, full check settings and appearance. Pending imports, selected rows, filters and unfinished settings drafts are not stored. A restart never starts network checks: Queued and Checking records become Cancelled.
 
 ## Location and file access
 
-The folder is resolved with [Tauri's app data directory](https://v2.tauri.app/reference/javascript/api/namespacepath/#appdatadir) and the application identifier `dev.hightemp.proxypulse`:
+The folder is resolved with [Tauri's app data directory](https://v2.tauri.app/reference/javascript/api/namespacepath/#appdatadir) and the stable application identifier `dev.hightemp.proxypulse`, retained so the ProxyVouch rename preserves existing workspaces:
 
 | Platform | Default folder |
 | --- | --- |
@@ -34,7 +34,7 @@ Use **Backup & restore** for portable JSON files:
 - **Proxies and results only** excludes the current application settings. Historical results still carry the profiles used to check them.
 - **Settings only** excludes all proxy rows and their credentials; custom URLs and response text remain part of settings.
 
-Backups are identified by `format: "proxy-pulse-backup"` and `version: 1`. Optional `entries` and `preferences` sections distinguish the scopes. Records preserve the requested protocol independently from the detected protocol, so Auto and SOCKS DNS modes round-trip exactly. The format has a 256 MiB limit and a maximum of 100,000 records; files with unknown versions or invalid fields are rejected before changes are applied.
+Backups are identified by the compatibility format `format: "proxy-pulse-backup"` and `version: 1`. ProxyVouch continues to read existing backups and writes the same format under its new default filename. Optional `entries` and `preferences` sections distinguish the scopes. Records preserve the requested protocol independently from the detected protocol, so Auto and SOCKS DNS modes round-trip exactly. The format has a 256 MiB limit and a maximum of 100,000 records; files with unknown versions or invalid fields are rejected before changes are applied.
 
 Choosing a file shows its name, record/result/invalid counts, and whether it contains settings or credentials. The backend keeps the actual pending archive; the preview does not send passwords to the frontend. Choose **Merge**, **Replace** or **Do not import proxies**, and independently choose whether to import settings. Merge compares the complete endpoint, credentials and requested protocol, skips exact duplicates, and retains existing results; identical invalid raw lines are also skipped. Replace preserves archive order and duplicates. An empty list can explicitly replace a nonempty one. Import is disabled while checks are running.
 

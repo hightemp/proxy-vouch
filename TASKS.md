@@ -1,4 +1,4 @@
-# Proxy Pulse — план реализации
+# ProxyVouch — план реализации
 
 Дата: 2026-09-06. Основание: [PRD.md](PRD.md), версия 1.1.
 
@@ -75,7 +75,7 @@
 - Подтверждение: Созданы Rust workspace и Tauri/React-приложение; Linux debug/release собираются, настоящее окно запускается.
 
 - Зависимости: T-001. Требования: PRD §1, §9.1; AC-16.
-- Результат: минимально запускаемое окно Proxy Pulse, React/TypeScript/Vite и Rust-модули `parser`, `model`, `checker`, `scheduler`, `export`, `settings`.
+- Результат: минимально запускаемое окно ProxyVouch, React/TypeScript/Vite и Rust-модули `parser`, `model`, `checker`, `scheduler`, `export`, `settings`.
 - Готово, когда: development- и release-сборки запускаются на Linux; весь создаваемый код и UI на английском; настройки Tauri не включают лишние разрешения.
 
 ### [x] T-005. Добавить воспроизводимые команды разработки

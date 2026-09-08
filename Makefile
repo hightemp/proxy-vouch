@@ -51,11 +51,11 @@ test-release: ## Test version synchronization and release publication safeguards
 	node --test scripts/tests/*.test.mjs
 
 test-startup: ## Check the development WebView with ambient proxy variables (Linux WebDriver required)
-	cargo build -p proxy-pulse --locked
+	cargo build -p proxy-vouch --locked
 	python3 scripts/proxy_environment_smoke.py
 
 test-integration: ## Check real protocols against local proxy fixtures
-	cargo build -p proxy-pulse-core --example check --locked
+	cargo build -p proxy-vouch-core --example check --locked
 	python3 scripts/network_fixtures.py
 
 test-ui: ## Run browser layout and accessibility smoke checks

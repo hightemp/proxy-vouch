@@ -1,21 +1,21 @@
 <p align="center">
-  <img src="src-tauri/icons/icon.png" alt="Proxy Pulse icon" width="112" height="112">
+  <img src="src-tauri/icons/icon.png" alt="ProxyVouch icon" width="112" height="112">
 </p>
 
-<h1 align="center">Proxy Pulse</h1>
+<h1 align="center">ProxyVouch</h1>
 
 <p align="center">
-  <a href="https://github.com/hightemp/proxy-pulse/actions/workflows/quality.yml"><img src="https://github.com/hightemp/proxy-pulse/actions/workflows/quality.yml/badge.svg" alt="Quality checks"></a>
-  <a href="https://github.com/hightemp/proxy-pulse/actions/workflows/release.yml"><img src="https://github.com/hightemp/proxy-pulse/actions/workflows/release.yml/badge.svg" alt="Release build"></a>
-  <a href="https://github.com/hightemp/proxy-pulse/releases/latest"><img src="https://img.shields.io/github/v/release/hightemp/proxy-pulse" alt="Latest release"></a>
+  <a href="https://github.com/hightemp/proxy-vouch/actions/workflows/quality.yml"><img src="https://github.com/hightemp/proxy-vouch/actions/workflows/quality.yml/badge.svg" alt="Quality checks"></a>
+  <a href="https://github.com/hightemp/proxy-vouch/actions/workflows/release.yml"><img src="https://github.com/hightemp/proxy-vouch/actions/workflows/release.yml/badge.svg" alt="Release build"></a>
+  <a href="https://github.com/hightemp/proxy-vouch/releases/latest"><img src="https://img.shields.io/github/v/release/hightemp/proxy-vouch" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
   <a href="https://v2.tauri.app/"><img src="https://img.shields.io/badge/Tauri-2-24C8D8?logo=tauri&amp;logoColor=white" alt="Built with Tauri 2"></a>
-  <img src="https://asdertasd.site/counter/proxy-pulse" alt="Proxy Pulse counter">
+  <img src="https://asdertasd.site/counter/proxy-pulse" alt="ProxyVouch counter">
 </p>
 
 A local desktop proxy checker built with Tauri, Rust and React. Import a mixed list, verify real requests through each proxy, and copy or save the results.
 
-![Proxy Pulse main window with the proxy list and check results](screenshots/2026-09-06_12-15.png)
+![ProxyVouch main window with the proxy list and check results](screenshots/2026-09-06_12-15.png)
 
 ## Run the application
 
@@ -32,8 +32,8 @@ make dev
 The desktop process automatically adds loopback and Tauri's local hosts to both `NO_PROXY` and `no_proxy` before WebKit starts. Existing exclusions and HTTP/HTTPS proxy settings are preserved. This keeps the development UI at `127.0.0.1:1420` local when your shell has `HTTP_PROXY` configured; no shell or system configuration changes are needed. The checker still uses each explicitly selected proxy.
 
 ```sh
-make build-debug  # Standalone debug executable: target/debug/proxy-pulse
-make build        # Release executable: target/release/proxy-pulse
+make build-debug  # Standalone debug executable: target/debug/proxy-vouch
+make build        # Release executable: target/release/proxy-vouch
 make package      # Linux .deb + AppImage: target/release/bundle/
 make appimage     # Linux AppImage only
 make help         # All commands
@@ -92,7 +92,7 @@ Your proxy list, credentials, last results, full check settings and appearance a
 
 Open **Backup & restore** to export a full workspace, proxies with results, or settings alone. Import shows the file contents before applying them: merge skips exact duplicates and keeps existing results, while replace restores the list including its duplicates. Settings can be imported independently. Portable backup JSON files are distinct from the existing CSV/JSON reports; ordinary proxy lists still use **Add proxies**.
 
-The data folder is shown in **Backup & restore**. On Linux it defaults to `~/.local/share/dev.hightemp.proxypulse/` (or `$XDG_DATA_HOME/dev.hightemp.proxypulse/`), on macOS to `~/Library/Application Support/dev.hightemp.proxypulse/`, and on Windows to `%APPDATA%/dev.hightemp.proxypulse/`. Local files and backups contain passwords and custom URLs without encryption; Unix data directories and files use owner-only permissions. There is no telemetry, cloud account or system proxy switcher. See [storage and backups](docs/storage.md) for format, recovery and limits.
+The data folder is shown in **Backup & restore**. On Linux it defaults to `~/.local/share/dev.hightemp.proxypulse/` (or `$XDG_DATA_HOME/dev.hightemp.proxypulse/`), on macOS to `~/Library/Application Support/dev.hightemp.proxypulse/`, and on Windows to `%APPDATA%/dev.hightemp.proxypulse/`. ProxyVouch retains this stable legacy identifier path so upgrades do not strand an existing workspace. Local files and backups contain passwords and custom URLs without encryption; Unix data directories and files use owner-only permissions. There is no telemetry, cloud account or system proxy switcher. See [storage and backups](docs/storage.md) for format, recovery and limits.
 
 ## Verify
 

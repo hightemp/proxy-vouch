@@ -18,7 +18,7 @@ export function expectedAssets(version) {
   return Object.entries(platforms)
     .flatMap(([platform, formats]) =>
       formats.map(
-        (format) => `proxy-pulse_${version}_${platform}${format.extension}`,
+        (format) => `proxy-vouch_${version}_${platform}${format.extension}`,
       ),
     )
     .sort();
@@ -50,7 +50,7 @@ export function collectAssets(root, target, platform, output) {
     const source = path.join(directory, candidates[0]);
     const destination = path.join(
       output,
-      `proxy-pulse_${version}_${platform}${format.extension}`,
+      `proxy-vouch_${version}_${platform}${format.extension}`,
     );
     if (!fs.statSync(source).isFile() || fs.statSync(source).size === 0)
       throw new Error("A generated release asset is empty or not a file.");

@@ -1,4 +1,4 @@
-use proxy_pulse_core::{
+use proxy_vouch_core::{
     checker::{check, Control},
     model::CheckSettings,
     parser::parse_line,

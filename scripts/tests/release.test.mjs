@@ -28,7 +28,7 @@ function git(root, ...args) {
 }
 function fixture(t, version = "0.1.0") {
   const directory = fs.mkdtempSync(
-    path.join(os.tmpdir(), "proxy-pulse-release-"),
+    path.join(os.tmpdir(), "proxy-vouch-release-"),
   );
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const root = path.join(directory, "repo");
@@ -36,7 +36,7 @@ function fixture(t, version = "0.1.0") {
   fs.writeFileSync(path.join(root, "VERSION"), version + "\n");
   fs.writeFileSync(
     path.join(root, "package.json"),
-    JSON.stringify({ name: "proxy-pulse", version }, null, 2) + "\n",
+    JSON.stringify({ name: "proxy-vouch", version }, null, 2) + "\n",
   );
   fs.writeFileSync(
     path.join(root, "Cargo.toml"),
@@ -44,7 +44,7 @@ function fixture(t, version = "0.1.0") {
   );
   fs.writeFileSync(
     path.join(root, "Cargo.lock"),
-    `version = 4\n\n[[package]]\nname = "external"\nversion = "8.0.0"\n\n[[package]]\nname = "proxy-pulse"\nversion = "${version}"\n\n[[package]]\nname = "proxy-pulse-core"\nversion = "${version}"\n`,
+    `version = 4\n\n[[package]]\nname = "external"\nversion = "8.0.0"\n\n[[package]]\nname = "proxy-vouch"\nversion = "${version}"\n\n[[package]]\nname = "proxy-vouch-core"\nversion = "${version}"\n`,
   );
   fs.writeFileSync(
     path.join(root, "src-tauri/tauri.conf.json"),
@@ -125,14 +125,14 @@ test("synchronization follows VERSION and preserves external dependency resoluti
 
 test("GitHub URLs are canonical and never retain remote credentials", () => {
   assert.equal(
-    repositoryFromRemote("git@github.com:example/proxy-pulse.git"),
-    "example/proxy-pulse",
+    repositoryFromRemote("git@github.com:example/proxy-vouch.git"),
+    "example/proxy-vouch",
   );
   assert.equal(
     repositoryFromRemote(
-      "https://user:secret@github.com/example/proxy-pulse.git",
+      "https://user:secret@github.com/example/proxy-vouch.git",
     ),
-    "example/proxy-pulse",
+    "example/proxy-vouch",
   );
   assert.throws(
     () => repositoryFromRemote("ssh://git@unrelated.example/repository"),
@@ -146,7 +146,7 @@ test("release notes include only commits since the previous reachable version ta
   git(root, "tag", "v0.1.0");
   bump(root, "0.2.0", "Fix [layout] and <input> rendering");
   const head = git(root, "rev-parse", "HEAD");
-  const notes = releaseNotes(root, "example/proxy-pulse");
+  const notes = releaseNotes(root, "example/proxy-vouch");
   assert.ok(notes.includes(`/commit/${head}`));
   assert.ok(!notes.includes(`/commit/${initial}`));
   assert.ok(notes.includes("Fix \\[layout\\] and \\<input\\> rendering"));
@@ -157,15 +157,15 @@ test("release notes include only commits since the previous reachable version ta
 test("first release notes include the initial history", (t) => {
   const { root } = fixture(t);
   assert.match(
-    releaseNotes(root, "example/proxy-pulse"),
+    releaseNotes(root, "example/proxy-vouch"),
     /Initial implementation/,
   );
-  assert.match(releaseNotes(root, "example/proxy-pulse"), /Initial release/);
+  assert.match(releaseNotes(root, "example/proxy-vouch"), /Initial release/);
 });
 
 test("dry run creates no tag and publish pushes the committed VERSION tag", (t) => {
   const { root, remote } = fixture(t);
-  const options = { repository: "example/proxy-pulse", dryRun: true };
+  const options = { repository: "example/proxy-vouch", dryRun: true };
   assert.equal(publishTag(root, options).pushed, false);
   assert.equal(git(root, "tag", "--list"), "");
   assert.equal(git(root, "ls-remote", "--tags", remote), "");
@@ -180,13 +180,13 @@ test("dirty or unpushed changes are rejected before tag creation", (t) => {
   const { root } = fixture(t);
   fs.writeFileSync(path.join(root, "unfinished.txt"), "work");
   assert.throws(
-    () => prepareRelease(root, { repository: "example/proxy-pulse" }),
+    () => prepareRelease(root, { repository: "example/proxy-vouch" }),
     /clean/,
   );
   git(root, "add", ".");
   git(root, "commit", "-m", "Unpushed work");
   assert.throws(
-    () => prepareRelease(root, { repository: "example/proxy-pulse" }),
+    () => prepareRelease(root, { repository: "example/proxy-vouch" }),
     /Push the current/,
   );
   assert.equal(git(root, "tag", "--list"), "");
@@ -199,13 +199,13 @@ test("conflicting local tags are not moved; an unpushed correct tag can be resum
   git(root, "push", "origin", "main");
   git(root, "tag", "v0.2.0", first);
   assert.throws(
-    () => prepareRelease(root, { repository: "example/proxy-pulse" }),
+    () => prepareRelease(root, { repository: "example/proxy-vouch" }),
     /different commit/,
   );
   git(root, "tag", "-d", "v0.2.0");
   git(root, "tag", "-a", "v0.2.0", "-m", "Release v0.2.0");
   assert.equal(
-    publishTag(root, { repository: "example/proxy-pulse" }).pushed,
+    publishTag(root, { repository: "example/proxy-vouch" }).pushed,
     true,
   );
 });
@@ -215,7 +215,7 @@ test("a rejected push retains the local tag for a safe retry", (t) => {
   const hook = path.join(remote, "hooks/pre-receive");
   fs.writeFileSync(hook, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
   assert.throws(
-    () => publishTag(root, { repository: "example/proxy-pulse" }),
+    () => publishTag(root, { repository: "example/proxy-vouch" }),
     /Local tag v0.1.0 was retained/,
   );
   assert.equal(
@@ -225,7 +225,7 @@ test("a rejected push retains the local tag for a safe retry", (t) => {
   assert.equal(git(root, "ls-remote", "--tags", "origin"), "");
   fs.unlinkSync(hook);
   assert.equal(
-    publishTag(root, { repository: "example/proxy-pulse" }).pushed,
+    publishTag(root, { repository: "example/proxy-vouch" }).pushed,
     true,
   );
 });
@@ -246,11 +246,11 @@ test("asset collection requires AppImage and ignores stale versions", (t) => {
     const dir = path.join(root, "target", target, "release/bundle", folder);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(
-      path.join(dir, `Proxy Pulse_0.1.0_amd64${extension}`),
+      path.join(dir, `ProxyVouch_0.1.0_amd64${extension}`),
       "current",
     );
     fs.writeFileSync(
-      path.join(dir, `Proxy Pulse_0.0.9_amd64${extension}`),
+      path.join(dir, `ProxyVouch_0.0.9_amd64${extension}`),
       "stale",
     );
   }
@@ -258,7 +258,7 @@ test("asset collection requires AppImage and ignores stale versions", (t) => {
   assert.equal(collectAssets(root, target, "linux_x86_64", output).length, 2);
   assert.ok(
     fs.readFileSync(
-      path.join(output, "proxy-pulse_0.1.0_linux_x86_64.AppImage"),
+      path.join(output, "proxy-vouch_0.1.0_linux_x86_64.AppImage"),
       "utf8",
     ) === "current",
   );
@@ -270,14 +270,14 @@ test("missing assets block publication before any GitHub mutation", (t) => {
   git(root, "tag", "v0.1.0");
   const directory = assets(root, "0.1.0");
   fs.unlinkSync(
-    path.join(directory, "proxy-pulse_0.1.0_linux_x86_64.AppImage"),
+    path.join(directory, "proxy-vouch_0.1.0_linux_x86_64.AppImage"),
   );
   const calls = [];
   assert.throws(
     () =>
       publishGithubRelease(
         root,
-        "example/proxy-pulse",
+        "example/proxy-vouch",
         "v0.1.0",
         directory,
         (...args) => calls.push(args),
@@ -294,7 +294,7 @@ test("draft is published only after all packages and checksums upload", (t) => {
   const calls = [];
   publishGithubRelease(
     root,
-    "example/proxy-pulse",
+    "example/proxy-vouch",
     "v0.1.0",
     directory,
     (program, args) => {
@@ -314,7 +314,7 @@ test("draft is published only after all packages and checksums upload", (t) => {
   assert.ok(calls[3].includes("--draft=false"));
   assert.match(
     fs.readFileSync(path.join(root, "artifacts/release-notes.md"), "utf8"),
-    /https:\/\/github.com\/example\/proxy-pulse\/commit\//,
+    /https:\/\/github.com\/example\/proxy-vouch\/commit\//,
   );
   assert.equal(
     fs
@@ -334,7 +334,7 @@ test("upload failures leave drafts unpublished and published releases are immuta
     () =>
       publishGithubRelease(
         root,
-        "example/proxy-pulse",
+        "example/proxy-vouch",
         "v0.1.0",
         directory,
         (_, args) => {
@@ -367,7 +367,7 @@ test("a dash in build metadata does not mark a stable release as prerelease", (t
   const calls = [];
   publishGithubRelease(
     root,
-    "example/proxy-pulse",
+    "example/proxy-vouch",
     tag,
     assets(root, readVersion(root)),
     (_, args) => {

@@ -209,7 +209,7 @@ class Fixtures:
 
 async def acceptance():
     checks = []
-    with tempfile.TemporaryDirectory(prefix="proxy-pulse-fixtures-") as directory:
+    with tempfile.TemporaryDirectory(prefix="proxy-vouch-fixtures-") as directory:
         fixtures = Fixtures(directory)
         fixtures.certificates()
         http_target = await fixtures.listen("http_target", fixtures.endpoint)

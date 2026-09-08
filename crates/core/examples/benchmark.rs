@@ -1,4 +1,4 @@
-use proxy_pulse_core::{parser::ImportOptions, session::Session};
+use proxy_vouch_core::{parser::ImportOptions, session::Session};
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

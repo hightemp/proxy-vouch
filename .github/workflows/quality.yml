@@ -32,5 +32,5 @@ jobs:
         with:
           name: linux-debug-and-test-results
           path: |
-            target/debug/proxy-pulse
+            target/debug/proxy-vouch
             artifacts/*results.json

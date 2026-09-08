@@ -37,7 +37,7 @@ class Driver:
         return await asyncio.to_thread(self.request, method, f"/session/{self.session}{path}", payload)
 
     async def create(self, binary=None):
-        binary = binary or os.environ.get("PROXY_PULSE_BINARY", str(ROOT / "target/debug/proxy-pulse"))
+        binary = binary or os.environ.get("PROXY_VOUCH_BINARY", str(ROOT / "target/debug/proxy-vouch"))
         result = await asyncio.to_thread(self.request, "POST", "/session", {"capabilities": {"alwaysMatch": {"tauri:options": {"application": binary}}}})
         self.session = result["sessionId"]
 
@@ -79,7 +79,7 @@ def isolated_application(directory):
     if sys.platform != "linux":
         raise RuntimeError("This WebKit smoke runner requires Linux and isolated XDG folders")
     directory = Path(directory)
-    binary = os.environ.get("PROXY_PULSE_BINARY", str(ROOT / "target/debug/proxy-pulse"))
+    binary = os.environ.get("PROXY_VOUCH_BINARY", str(ROOT / "target/debug/proxy-vouch"))
     wrapper = directory / "launch-app"
     wrapper.write_text(f"#!{sys.executable}\nimport os,sys\nenv=dict(os.environ)\nenv['XDG_DATA_HOME']={str(directory / 'data')!r}\nenv['XDG_CONFIG_HOME']={str(directory / 'config')!r}\nos.execve({binary!r},[{binary!r},*sys.argv[1:]],env)\n")
     wrapper.chmod(0o700)
@@ -88,7 +88,7 @@ def isolated_application(directory):
 
 async def main():
     driver = Driver(int(os.environ.get("TAURI_DRIVER_PORT", "4457")))
-    with tempfile.TemporaryDirectory(prefix="proxy-pulse-native-") as directory:
+    with tempfile.TemporaryDirectory(prefix="proxy-vouch-native-") as directory:
         fixtures = Fixtures(directory)
         fixtures.certificates()
         target = await fixtures.listen("target", fixtures.endpoint)

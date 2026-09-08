@@ -1,5 +1,5 @@
 [package]
-name = "proxy-pulse"
+name = "proxy-vouch"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,5 +15,4 @@ tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-proxy-pulse-core = { path = "../crates/core" }
-
+proxy-vouch-core = { path = "../crates/core" }

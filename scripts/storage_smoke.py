@@ -23,7 +23,7 @@ async def main():
     xclip = shutil.which("xclip")
     if not xclip or not Path(xdotool).is_file():
         raise RuntimeError("xdotool and xclip are required to test real backup file dialogs")
-    with tempfile.TemporaryDirectory(prefix="proxy-pulse-storage-") as directory:
+    with tempfile.TemporaryDirectory(prefix="proxy-vouch-storage-") as directory:
         directory = Path(directory)
         fixtures = Fixtures(directory)
         target = await fixtures.listen("target", fixtures.endpoint)
@@ -187,7 +187,7 @@ async def main():
                 (directory / "invalid.json").write_text('{"version":99}')
                 await driver.click("Choose backup file")
                 await choose_path(directory / "invalid.json")
-                await driver.wait("return document.querySelector('dialog .inline-error')?.textContent.includes('valid Proxy Pulse backup');")
+                await driver.wait("return document.querySelector('dialog .inline-error')?.textContent.includes('valid ProxyVouch backup');")
                 assert (await driver.ipc("snapshot", {"since": 0}))["total"] == 3
                 await close_dialog()
                 print("PASS native restore: selective import, merge, replace and invalid-file rejection", flush=True)

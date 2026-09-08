@@ -52,7 +52,7 @@ class Trap(BaseHTTPRequestHandler):
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--binary", default=str(ROOT / "target/debug/proxy-pulse"))
+    parser.add_argument("--binary", default=str(ROOT / "target/debug/proxy-vouch"))
     args = parser.parse_args()
     binary = str(Path(args.binary).resolve())
     tools = ROOT / "artifacts"
@@ -69,7 +69,7 @@ async def main():
         ("existing_exclusions", {"HTTP_PROXY": proxy, "http_proxy": proxy, "NO_PROXY": "keep.example", "no_proxy": "also-keep.example"}),
     ]
     results = []
-    with tempfile.TemporaryDirectory(prefix="proxy-pulse-startup-") as directory:
+    with tempfile.TemporaryDirectory(prefix="proxy-vouch-startup-") as directory:
         directory = Path(directory)
         log_path = ROOT / "artifacts/proxy-environment-smoke.log"
         log_path.parent.mkdir(exist_ok=True)
@@ -115,7 +115,7 @@ async def main():
                         await driver.ipc("preview_import", {"text": proxy, "options": {}})
                         await driver.ipc("commit_import", {"replace": False, "keepDuplicates": False, "includeInvalid": False})
                         snapshot = await driver.ipc("snapshot", {"since": 0})
-                        settings = dict(url="http://127.0.0.1:1420/", fallbackUrl="", ipEcho=False, expectedStatus=200, bodyContains="Proxy Pulse", concurrency=1, rateLimit=10, connectTimeoutMs=1000, attemptTimeoutMs=2000, totalTimeoutMs=5000, retries=0)
+                        settings = dict(url="http://127.0.0.1:1420/", fallbackUrl="", ipEcho=False, expectedStatus=200, bodyContains="ProxyVouch", concurrency=1, rateLimit=10, connectTimeoutMs=1000, attemptTimeoutMs=2000, totalTimeoutMs=5000, retries=0)
                         await driver.ipc("start_check", {"ids": [row["id"] for row in snapshot["rows"]], "settings": settings, "detectAgain": False})
                         for _ in range(100):
                             snapshot = await driver.ipc("snapshot", {"since": 0})

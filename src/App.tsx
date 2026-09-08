@@ -590,7 +590,7 @@ export default function App() {
             Formats & help
           </button>
           <div className="version">
-            Proxy Pulse <span>v{__APP_VERSION__}</span>
+            ProxyVouch <span>v{__APP_VERSION__}</span>
           </div>
         </div>
       </aside>
@@ -1657,7 +1657,7 @@ export default function App() {
             </button>
             <h3 className="subheading">Import a backup</h3>
             <p className="hint">
-              Choose a Proxy Pulse backup JSON file. For TXT/CSV/TSV lists, use
+              Choose a ProxyVouch backup JSON file. For TXT/CSV/TSV lists, use
               Add proxies. Exported reports are not backups.
             </p>
             <button
@@ -2178,7 +2178,7 @@ export default function App() {
               ? "Supported import formats"
               : "Formats & help"
           }
-          subtitle="Bring your existing lists. Proxy Pulse recognizes common proxy formats."
+          subtitle="Bring your existing lists. ProxyVouch recognizes common proxy formats."
           close={() => setModal(helpReturnTo)}
           wide
         >

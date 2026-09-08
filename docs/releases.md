@@ -20,7 +20,7 @@ make appimage        # Linux AppImage only
 
 Linux packages appear under `target/release/bundle/deb/` and `target/release/bundle/appimage/`. `make package` and `make appimage` enable the packaging tools' extract-and-run mode, so their build-time helpers do not require a FUSE mount.
 
-When a FUSE mount is unavailable, run the produced AppImage from the project root with `APPIMAGE_EXTRACT_AND_RUN=1 "./target/release/bundle/appimage/Proxy Pulse_$(cat VERSION)_amd64.AppImage"`. This is the mode used by the local AppImage smoke test.
+When a FUSE mount is unavailable, run the produced AppImage from the project root with `APPIMAGE_EXTRACT_AND_RUN=1 "./target/release/bundle/appimage/ProxyVouch_$(cat VERSION)_amd64.AppImage"`. This is the mode used by the local AppImage smoke test.
 
 The release workflow builds Linux on Ubuntu 22.04 to avoid unnecessarily raising the minimum glibc version. A locally built AppImage still inherits its build host's glibc requirements. This follows [Tauri's AppImage guidance](https://v2.tauri.app/distribute/appimage/).
 
