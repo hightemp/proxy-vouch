@@ -538,7 +538,7 @@ export default function App() {
             <Activity size={25} />
           </span>
           <span>
-            proxy<span className="brand-light">pulse</span>
+            Proxy<span className="brand-light">Vouch</span>
           </span>
         </div>
         <div className="nav-caption">WORKSPACE</div>
