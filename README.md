@@ -8,6 +8,7 @@
   <a href="https://github.com/hightemp/proxy-vouch/actions/workflows/quality.yml"><img src="https://github.com/hightemp/proxy-vouch/actions/workflows/quality.yml/badge.svg" alt="Quality checks"></a>
   <a href="https://github.com/hightemp/proxy-vouch/actions/workflows/release.yml"><img src="https://github.com/hightemp/proxy-vouch/actions/workflows/release.yml/badge.svg" alt="Release build"></a>
   <a href="https://github.com/hightemp/proxy-vouch/releases/latest"><img src="https://img.shields.io/github/v/release/hightemp/proxy-vouch" alt="Latest release"></a>
+  <a href="https://github.com/hightemp/proxy-vouch/releases"><img src="https://img.shields.io/github/downloads/hightemp/proxy-vouch/total?label=downloads" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
   <a href="https://v2.tauri.app/"><img src="https://img.shields.io/badge/Tauri-2-24C8D8?logo=tauri&amp;logoColor=white" alt="Built with Tauri 2"></a>
   <img src="https://asdertasd.site/counter/proxy-vouch" alt="ProxyVouch counter">
