@@ -2653,7 +2653,7 @@ dependencies = [
 
 [[package]]
 name = "proxy-vouch"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "proxy-vouch-core",
  "serde",
@@ -2666,7 +2666,7 @@ dependencies = [
 
 [[package]]
 name = "proxy-vouch-core"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "chrono",
  "csv",

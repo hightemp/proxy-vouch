@@ -36,7 +36,7 @@ jobs:
       - name: Validate committed version and tag
         run: node scripts/release.mjs validate-tag --tag "$RELEASE_TAG"
       - name: Test release safeguards and notes
-        run: pnpm test:release
+        run: node --test scripts/tests/release.test.mjs
 
   build:
     needs: validate
