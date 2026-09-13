@@ -864,8 +864,24 @@ mod country_tests {
     use crate::parser::parse_line;
     use std::{
         io::{Read, Write},
-        net::TcpListener,
+        net::{TcpListener, TcpStream},
     };
+
+    fn read_request(stream: &mut TcpStream) -> String {
+        // BSD/macOS can inherit the listener's nonblocking mode on accept.
+        stream.set_nonblocking(false).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let mut request = Vec::new();
+        while !request.ends_with(b"\r\n\r\n") {
+            let mut byte = [0];
+            stream.read_exact(&mut byte).unwrap();
+            request.push(byte[0]);
+            assert!(request.len() < 32768);
+        }
+        String::from_utf8(request).unwrap()
+    }
 
     fn fixture(
         settings: CheckSettings,
@@ -898,17 +914,7 @@ mod country_tests {
                     }
                     Err(error) => panic!("Fixture accept: {error}"),
                 };
-                stream
-                    .set_read_timeout(Some(Duration::from_secs(2)))
-                    .unwrap();
-                let mut request = Vec::new();
-                while !request.ends_with(b"\r\n\r\n") {
-                    let mut byte = [0];
-                    stream.read_exact(&mut byte).unwrap();
-                    request.push(byte[0]);
-                    assert!(request.len() < 32768);
-                }
-                let request = String::from_utf8(request).unwrap();
+                let request = read_request(&mut stream);
                 let country = request.starts_with("GET http://country.invalid/");
                 let custom = request.starts_with("GET http://check.invalid/custom");
                 requests.push(request);
@@ -944,6 +950,25 @@ mod country_tests {
             rate_limit: 100,
             ..CheckSettings::default()
         }
+    }
+
+    #[test]
+    fn fixture_reads_delayed_headers_on_an_initially_nonblocking_socket() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let mut client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let (mut stream, _) = listener.accept().unwrap();
+        stream.set_nonblocking(true).unwrap();
+        let writer = thread::spawn(move || {
+            thread::sleep(Duration::from_millis(50));
+            client
+                .write_all(b"GET / HTTP/1.1\r\nHost: fixture\r\n\r\n")
+                .unwrap();
+        });
+        assert_eq!(
+            read_request(&mut stream),
+            "GET / HTTP/1.1\r\nHost: fixture\r\n\r\n"
+        );
+        writer.join().unwrap();
     }
 
     #[test]
