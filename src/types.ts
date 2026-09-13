@@ -23,6 +23,7 @@ export interface Attempt {
   message: string;
   durationMs: number;
   exitIp: string | null;
+  countryCode: string | null;
   checkUrl: string;
 }
 export interface CheckResult {
@@ -32,6 +33,7 @@ export interface CheckResult {
   latencyMs: number | null;
   totalDurationMs: number;
   exitIp: string | null;
+  countryCode: string | null;
   checkedAt: string;
   code: string;
   stage: string;
@@ -78,6 +80,7 @@ export interface Settings {
   url: string;
   fallbackUrl: string;
   ipEcho: boolean;
+  countryLookup: boolean;
   expectedStatus: number;
   bodyContains: string;
   concurrency: number;
@@ -125,6 +128,7 @@ export const defaultSettings: Settings = {
   url: "https://api64.ipify.org?format=json",
   fallbackUrl: "",
   ipEcho: true,
+  countryLookup: true,
   expectedStatus: 200,
   bodyContains: "",
   concurrency: 20,

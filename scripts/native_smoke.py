@@ -102,6 +102,7 @@ async def main():
             await driver.click("Settings")
             await driver.fill(".modal .full-label input", f"http://127.0.0.1:{target}/")
             await driver.js("const select=[...document.querySelectorAll('.modal select')].find(e=>e.querySelector('option[value=light]')); select.value='light';select.dispatchEvent(new Event('change',{bubbles:true}));")
+            await driver.js("const checkbox=[...document.querySelectorAll('.checkbox-label')].find(el=>el.textContent.includes('Detect proxy country')).querySelector('input'); if(checkbox.checked) checkbox.click();")
             await driver.click("Save settings")
             await driver.wait("return !document.querySelector('dialog');")
             await driver.click("Add proxies")
@@ -120,6 +121,18 @@ async def main():
             assert snapshot["counts"] == {"Working": 4, "Failed": 1, "Invalid": 1}, snapshot["counts"]
             assert not snapshot["running"]
             await driver.screenshot("native-results.png")
+            await driver.js("const rows=[...document.querySelectorAll('.proxy-row')]; for(const index of [0,1,4]) rows[index].querySelector('input[type=checkbox]').click();")
+            await driver.fill("input[aria-label='Search proxies']", str(http))
+            await driver.wait("return document.querySelectorAll('.proxy-row').length===1;")
+            await driver.click("Copy selected (3)")
+            await driver.wait("return document.querySelector('.toast')?.textContent.includes('3 records copied');")
+            selected_clipboard = await driver.ipc("read_clipboard")
+            assert len(selected_clipboard.strip().splitlines()) == 3
+            assert "socks5h://" in selected_clipboard and "fixture%2Dsecret" in selected_clipboard
+            assert "wrong" not in selected_clipboard
+            await driver.fill("input[aria-label='Search proxies']", "")
+            await driver.wait("return document.querySelectorAll('.proxy-row').length===6;")
+            await driver.js("for(const checkbox of document.querySelectorAll('.proxy-row input:checked')) checkbox.click();")
             await driver.click("Copy working")
             await driver.wait("return Boolean(document.querySelector('.toast'));")
             clipboard = await driver.ipc("read_clipboard")
@@ -196,7 +209,7 @@ async def main():
             await driver.fill("input[aria-label='Search proxies']", "")
             await driver.wait("return document.querySelectorAll('.proxy-row').length===6;")
             # Use actual IPC for a controlled hanging run, then the visible Stop button.
-            settings = dict(url=f"http://127.0.0.1:{target}/slow",fallbackUrl="",ipEcho=True,expectedStatus=200,bodyContains="",concurrency=2,rateLimit=100,connectTimeoutMs=1000,attemptTimeoutMs=8000,totalTimeoutMs=15000,retries=0)
+            settings = dict(url=f"http://127.0.0.1:{target}/slow",fallbackUrl="",ipEcho=True,countryLookup=False,expectedStatus=200,bodyContains="",concurrency=2,rateLimit=100,connectTimeoutMs=1000,attemptTimeoutMs=8000,totalTimeoutMs=15000,retries=0)
             await driver.ipc("start_check", {"ids":[row["id"] for row in snapshot["rows"] if row["status"] == "Working"],"settings":settings,"detectAgain":False})
             await driver.wait("return [...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Stop checking');")
             start = asyncio.get_running_loop().time()
@@ -206,7 +219,7 @@ async def main():
             assert elapsed < 1, elapsed
             stopped = await driver.ipc("snapshot", {"since": 0})
             assert stopped["counts"].get("Cancelled") == 4, stopped["counts"]
-            output = {"native_ui":True,"initial_counts":snapshot["counts"],"clipboard_groups_verified":True,"json_report_verified":True,"native_file_dialogs_verified":file_dialogs,"search_verified":True,"cancellation_seconds":round(elapsed,3),"fixture_connections":fixtures.connections}
+            output = {"native_ui":True,"initial_counts":snapshot["counts"],"clipboard_groups_verified":True,"selected_clipboard_verified":True,"json_report_verified":True,"native_file_dialogs_verified":file_dialogs,"search_verified":True,"cancellation_seconds":round(elapsed,3),"fixture_connections":fixtures.connections}
             (ROOT / "artifacts/native-results.json").write_text(json.dumps(output,indent=2)+"\n")
             print(json.dumps(output,indent=2))
         finally:

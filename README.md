@@ -30,7 +30,9 @@ make dev
 
 `make dev` opens the native desktop app. `make preview` runs only the frontend in a browser; it clearly disables desktop operations and does not fabricate check results.
 
-The desktop process automatically adds loopback and Tauri's local hosts to both `NO_PROXY` and `no_proxy` before WebKit starts. Existing exclusions and HTTP/HTTPS proxy settings are preserved. This keeps the development UI at `127.0.0.1:1420` local when your shell has `HTTP_PROXY` configured; no shell or system configuration changes are needed. The checker still uses each explicitly selected proxy.
+`make dev` and `pnpm desktop` try port 1420 first, then automatically use the next available port (1421, 1422, etc.). The launcher starts Vite first and passes its actual URL to Tauri, so the desktop window follows the selected port. The URL is printed in the terminal. Closing the app or pressing Ctrl+C stops the development server; the saved Tauri configuration is unchanged.
+
+The desktop process automatically adds loopback and Tauri's local hosts to both `NO_PROXY` and `no_proxy` before WebKit starts. Existing exclusions and HTTP/HTTPS proxy settings are preserved. This keeps the development UI at `127.0.0.1` on the selected port local when your shell has `HTTP_PROXY` configured; no shell or system configuration changes are needed. The checker still uses each explicitly selected proxy.
 
 ```sh
 make build-debug  # Standalone debug executable: target/debug/proxy-vouch
@@ -69,6 +71,8 @@ Supported routes: HTTP, HTTPS (TLS to the proxy), SOCKS4, SOCKS4a, SOCKS5 with l
 
 The default check requests an IP echo endpoint over HTTPS. Settings also support custom HTTP/HTTPS URLs, response validation, a fallback URL, concurrency, pacing, deadlines and limited retries. Both certificate layers are verified. System and environment proxy settings do not select an alternative route for checks.
 
+**Detect proxy country** is enabled by default in Settings. After a successful check, an HTTPS request to [country.is](https://country.is/) through the same proxy looks up the measured exit IP (or the caller IP for custom checks). The list and row details show a flag and two-letter country code; you can sort by country or search its code. The lookup uses the run's request pacing and remaining deadline, with a maximum of five seconds. If it fails, the country is shown as `—` and the availability result stays unchanged. Turn the setting off to skip this extra request on subsequent runs. Country data is saved with results and included in CSV/JSON reports and backups.
+
 | Status | Meaning |
 | --- | --- |
 | Working | A real request passed the selected profile |
@@ -79,9 +83,11 @@ The default check requests an IP echo endpoint over HTTPS. Settings also support
 
 Open a row for protocol attempts, the sanitized check URL and error details. Latency measures the successful attempt, including setup and response validation. It is not ICMP ping or bandwidth. Authentication validity is reported separately; a successful request does not automatically prove that a supplied password was required.
 
-Select row checkboxes to reveal **Check selected** and **Remove selected (N)** above the table. Removal asks for confirmation and applies to the entire selection, including rows hidden by the current filter. Other rows stay in the list; the change is saved automatically. Removal is disabled while checks are running.
+Select row checkboxes to reveal **Copy selected (N)**, **Check selected** and **Remove selected (N)** above the table. Removal asks for confirmation and applies to the entire selection, including rows hidden by the current filter. Other rows stay in the list; the change is saved automatically. Removal is disabled while checks are running.
 
 ## Export and session data
+
+**Copy selected (N)** copies the entire selection in the current sort order, including rows hidden by filters and supplied credentials. It uses proxy URLs when every selected record has a known protocol, otherwise original lines. For mixed original source schemas, use **More** to choose a report.
 
 **Copy working / Save working** use proxy URLs. **Copy failed / Save failed** preserve original records. **More** offers Checked, Inconclusive, Selected, Filtered and All scopes, with URLs, original lines, compact text, CSV reports and versioned JSON reports.
 

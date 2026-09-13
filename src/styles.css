@@ -409,6 +409,7 @@ h1 {
 }
 .list-heading {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   padding: 20px 21px;
@@ -525,7 +526,7 @@ h1 {
 .proxy-row {
   display: grid;
   grid-template-columns:
-    23px minmax(155px, 1.6fr) 84px 108px 76px minmax(106px, 1fr)
+    23px minmax(155px, 1.6fr) 84px 108px 76px 68px minmax(106px, 1fr)
     102px 25px;
   align-items: center;
   column-gap: 10px;
@@ -538,6 +539,17 @@ h1 {
   color: #95a08d;
   font-size: 9px;
   letter-spacing: 0.5px;
+}
+.country {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.country-flag {
+  font-size: 18px;
+  line-height: 1;
 }
 .table-head button {
   padding: 0;
@@ -1359,13 +1371,13 @@ code {
   .table-head,
   .proxy-row {
     grid-template-columns:
-      20px minmax(140px, 1.5fr) 77px 103px 66px minmax(100px, 1fr)
+      20px minmax(120px, 1.5fr) 77px 103px 66px 64px minmax(85px, 1fr)
       24px;
     column-gap: 7px;
     padding-left: 17px;
     padding-right: 17px;
   }
-  .table-head > :nth-child(7),
+  .table-head > :nth-child(8),
   .proxy-row > .checked-at {
     display: none;
   }

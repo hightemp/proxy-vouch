@@ -148,6 +148,27 @@ function ErrorText({ error }: { error: string }) {
   ) : null;
 }
 
+function Country({ code }: { code: string | null | undefined }) {
+  if (!code || !/^[A-Z]{2}$/.test(code))
+    return (
+      <span className="country" title="Country not determined">
+        —
+      </span>
+    );
+  const name = new Intl.DisplayNames(["en"], { type: "region" }).of(code);
+  const flag = String.fromCodePoint(
+    ...[...code].map((letter) => 0x1f1e6 + letter.charCodeAt(0) - 65),
+  );
+  return (
+    <span className="country" title={name} aria-label={`${name} (${code})`}>
+      <span className="country-flag" aria-hidden="true">
+        {flag}
+      </span>
+      {code}
+    </span>
+  );
+}
+
 export default function App() {
   const [rows, setRows] = useState<Row[]>([]);
   const rowMap = useRef(new Map<number, Row>());
@@ -317,6 +338,12 @@ export default function App() {
         return a.status.localeCompare(b.status) || a.id - b.id;
       if (sort === "protocol")
         return a.protocol.localeCompare(b.protocol) || a.id - b.id;
+      if (sort === "country")
+        return (
+          (a.result?.countryCode ?? "ZZZ").localeCompare(
+            b.result?.countryCode ?? "ZZZ",
+          ) || a.id - b.id
+        );
       return (
         a.address.localeCompare(b.address, undefined, { numeric: true }) ||
         a.id - b.id
@@ -330,7 +357,7 @@ export default function App() {
       (row) =>
         (filter === "All" || row.status === filter) &&
         (!q ||
-          `${row.address} ${row.username} ${row.label}`
+          `${row.address} ${row.username} ${row.label} ${row.result?.countryCode ?? ""}`
             .toLowerCase()
             .includes(q)),
     );
@@ -741,6 +768,30 @@ export default function App() {
               {selected.size > 0 && (
                 <>
                   <button
+                    disabled={!native || busy}
+                    title="Copy selected proxies, including credentials and rows hidden by filters"
+                    onClick={() => {
+                      const canUseUrls = rows
+                        .filter((row) => selected.has(row.id))
+                        .every(
+                          (row) =>
+                            row.status !== "Invalid" &&
+                            (row.requestedProtocol !== "auto" ||
+                              (row.result?.status === "Working" &&
+                                row.result.detected !== null)),
+                        );
+                      void sendExport("clipboard", {
+                        scope: "Selected",
+                        format: canUseUrls ? "urls" : "original",
+                        credentials: true,
+                        ids: [],
+                      });
+                    }}
+                  >
+                    <Copy size={15} />
+                    Copy selected ({selected.size})
+                  </button>
+                  <button
                     disabled={busy || meta.running}
                     onClick={() => void startCheck([...selected])}
                   >
@@ -861,6 +912,7 @@ export default function App() {
             <button onClick={() => setSort("latency")}>
               LATENCY <ArrowUpDown size={12} />
             </button>
+            <button onClick={() => setSort("country")}>COUNTRY</button>
             <span>EXIT IP</span>
             <button onClick={() => setSort("checked")}>LAST CHECKED</button>
             <span />
@@ -985,6 +1037,7 @@ export default function App() {
                           "—"
                         )}
                       </span>
+                      <Country code={row.result?.countryCode} />
                       <span className="mono exit-ip">
                         {row.result?.exitIp ?? "—"}
                       </span>
@@ -1039,6 +1092,7 @@ export default function App() {
                 <option value="address">Address</option>
                 <option value="status">Status</option>
                 <option value="protocol">Protocol</option>
+                <option value="country">Country</option>
                 <option value="latency">Fastest first</option>
                 <option value="checked">Recently checked</option>
               </select>
@@ -1425,6 +1479,21 @@ export default function App() {
               />
               Require JSON with a valid “ip” field
             </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={draft.countryLookup}
+                onChange={(e) =>
+                  setDraft({ ...draft, countryLookup: e.target.checked })
+                }
+              />
+              Detect proxy country
+            </label>
+            <p className="hint">
+              Look up the exit IP through each working proxy using country.is.
+              If the lookup fails, the proxy keeps its check result and the
+              country is shown as “—”. Disable this to skip the extra request.
+            </p>
             <div className="form-grid">
               <label>
                 Expected HTTP status
@@ -1921,6 +1990,12 @@ export default function App() {
               <div>
                 <dt>Exit IP</dt>
                 <dd>{detail.result?.exitIp ?? "Not measured"}</dd>
+              </div>
+              <div>
+                <dt>Country</dt>
+                <dd>
+                  <Country code={detail.result?.countryCode} />
+                </dd>
               </div>
               <div>
                 <dt>Request latency</dt>

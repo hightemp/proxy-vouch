@@ -248,6 +248,7 @@ fn attempt(
         message: message.into(),
         duration_ms: 0,
         exit_ip: None,
+        country_code: None,
         check_url: safe_url(url),
     }
 }
@@ -624,14 +625,13 @@ fn probe(
                 "The response did not contain the expected text.",
             )
         } else {
-            let ip = serde_json::from_slice::<serde_json::Value>(&data.body)
-                .ok()
-                .and_then(|v| {
-                    v.get("ip")
-                        .and_then(|ip| ip.as_str())
-                        .and_then(|ip| ip.parse::<IpAddr>().ok())
-                        .map(|ip| ip.to_string())
-                });
+            let json = serde_json::from_slice::<serde_json::Value>(&data.body).ok();
+            let ip = json.as_ref().and_then(|v| {
+                v.get("ip")
+                    .and_then(|ip| ip.as_str())
+                    .and_then(|ip| ip.parse::<IpAddr>().ok())
+                    .map(|ip| ip.to_string())
+            });
             if settings.ip_echo && ip.is_none() {
                 attempt(
                     protocol,
@@ -654,6 +654,15 @@ fn probe(
                 if settings.ip_echo {
                     result.exit_ip = ip;
                 }
+                result.country_code = json.as_ref().and_then(|value| {
+                    value
+                        .get("country")?
+                        .as_str()
+                        .filter(|code| {
+                            code.len() == 2 && code.bytes().all(|byte| byte.is_ascii_alphabetic())
+                        })
+                        .map(str::to_ascii_uppercase)
+                });
                 result
             }
         }
@@ -678,6 +687,22 @@ pub fn check(
     settings: &CheckSettings,
     control: &Arc<Control>,
     preferred: Option<Protocol>,
+) -> CheckResult {
+    check_with_country_url(
+        proxy,
+        settings,
+        control,
+        preferred,
+        "https://api.country.is/",
+    )
+}
+
+fn check_with_country_url(
+    proxy: &Proxy,
+    settings: &CheckSettings,
+    control: &Arc<Control>,
+    preferred: Option<Protocol>,
+    country_url: &str,
 ) -> CheckResult {
     let started = Instant::now();
     let deadline = started + Duration::from_millis(settings.total_timeout_ms);
@@ -771,6 +796,7 @@ pub fn check(
         latency_ms: None,
         total_duration_ms: started.elapsed().as_millis() as u64,
         exit_ip: None,
+        country_code: None,
         checked_at: chrono::Utc::now().to_rfc3339(),
         code: "PROTOCOL_NOT_DETECTED".into(),
         stage: "protocol".into(),
@@ -793,7 +819,206 @@ pub fn check(
         }
     }
     result.attempts = attempts;
+    if settings.country_lookup && result.status == Status::Working {
+        if let Some(protocol) = result.detected {
+            // Query the measured exit IP when available: rotating proxies can use
+            // another exit for the next request. Custom checks use the caller IP.
+            let url = format!(
+                "{country_url}{}",
+                result.exit_ip.as_deref().unwrap_or_default()
+            );
+            let country_settings = CheckSettings {
+                ip_echo: true,
+                expected_status: 200,
+                body_contains: String::new(),
+                rate_limit: settings.rate_limit.min(10),
+                ..settings.clone()
+            };
+            let country = probe(
+                proxy,
+                protocol,
+                &url,
+                &country_settings,
+                control,
+                deadline.min(Instant::now() + Duration::from_secs(5)),
+            );
+            // Optional metadata must never overwrite the availability verdict,
+            // its latency, or the attempts that established it.
+            if country.status == Status::Working
+                && (result.exit_ip.is_none() || country.exit_ip == result.exit_ip)
+            {
+                result.country_code = country.country_code;
+                if result.country_code.is_some() && result.exit_ip.is_none() {
+                    result.exit_ip = country.exit_ip;
+                }
+            }
+        }
+    }
+    result.total_duration_ms = started.elapsed().as_millis() as u64;
     result
+}
+
+#[cfg(test)]
+mod country_tests {
+    use super::*;
+    use crate::parser::parse_line;
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+    };
+
+    fn fixture(
+        settings: CheckSettings,
+        country_response: &str,
+        cancel_country: bool,
+    ) -> (CheckResult, Vec<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let proxy = parse_line(
+            &format!(
+                "http://demo:fixture-password@{}",
+                listener.local_addr().unwrap()
+            ),
+            false,
+        )
+        .unwrap();
+        let response = country_response.to_owned();
+        let control = Arc::new(Control::default());
+        let server_control = Arc::clone(&control);
+        let finished = Arc::new(AtomicBool::new(false));
+        let server_finished = Arc::clone(&finished);
+        let server = thread::spawn(move || {
+            let mut requests = Vec::new();
+            while !server_finished.load(Ordering::SeqCst) {
+                let (mut stream, _) = match listener.accept() {
+                    Ok(connection) => connection,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        thread::sleep(Duration::from_millis(2));
+                        continue;
+                    }
+                    Err(error) => panic!("Fixture accept: {error}"),
+                };
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut request = Vec::new();
+                while !request.ends_with(b"\r\n\r\n") {
+                    let mut byte = [0];
+                    stream.read_exact(&mut byte).unwrap();
+                    request.push(byte[0]);
+                    assert!(request.len() < 32768);
+                }
+                let request = String::from_utf8(request).unwrap();
+                let country = request.starts_with("GET http://country.invalid/");
+                let custom = request.starts_with("GET http://check.invalid/custom");
+                requests.push(request);
+                if country && cancel_country {
+                    server_control.cancel();
+                    continue;
+                }
+                let (status, body) = if country {
+                    (200, response.as_str())
+                } else if custom {
+                    (201, "accepted")
+                } else {
+                    (200, r#"{"ip":"198.51.100.9"}"#)
+                };
+                write!(
+                    stream,
+                    "HTTP/1.1 {status} OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                )
+                .unwrap();
+            }
+            requests
+        });
+        let result =
+            check_with_country_url(&proxy, &settings, &control, None, "http://country.invalid/");
+        finished.store(true, Ordering::SeqCst);
+        (result, server.join().unwrap())
+    }
+
+    fn settings() -> CheckSettings {
+        CheckSettings {
+            url: "http://check.invalid/".into(),
+            rate_limit: 100,
+            ..CheckSettings::default()
+        }
+    }
+
+    #[test]
+    fn country_lookup_uses_the_authenticated_proxy_and_measured_exit_ip() {
+        let (result, requests) =
+            fixture(settings(), r#"{"ip":"198.51.100.9","country":"de"}"#, false);
+        assert_eq!(result.status, Status::Working);
+        assert_eq!(result.country_code.as_deref(), Some("DE"));
+        assert_eq!(result.attempts.len(), 1);
+        assert_eq!(result.latency_ms, Some(result.attempts[0].duration_ms));
+        assert_eq!(requests.len(), 2);
+        assert!(requests[1].starts_with("GET http://country.invalid/198.51.100.9 HTTP/1.1\r\n"));
+        assert!(requests[1].contains("Proxy-Authorization: Basic "));
+    }
+
+    #[test]
+    fn disabling_country_lookup_makes_no_extra_request() {
+        let (result, requests) = fixture(
+            CheckSettings {
+                country_lookup: false,
+                ..settings()
+            },
+            "",
+            false,
+        );
+        assert_eq!(result.status, Status::Working);
+        assert!(result.country_code.is_none());
+        assert_eq!(requests.len(), 1);
+    }
+
+    #[test]
+    fn country_lookup_has_independent_response_rules_for_custom_checks() {
+        let (result, requests) = fixture(
+            CheckSettings {
+                url: "http://check.invalid/custom".into(),
+                ip_echo: false,
+                expected_status: 201,
+                body_contains: "accepted".into(),
+                ..settings()
+            },
+            r#"{"ip":"198.51.100.9","country":"US"}"#,
+            false,
+        );
+        assert_eq!(result.status, Status::Working);
+        assert_eq!(result.country_code.as_deref(), Some("US"));
+        assert_eq!(result.exit_ip.as_deref(), Some("198.51.100.9"));
+        assert!(requests[1].starts_with("GET http://country.invalid/ HTTP/1.1\r\n"));
+    }
+
+    #[test]
+    fn unavailable_or_invalid_country_data_does_not_fail_a_working_proxy() {
+        for body in [
+            "unavailable",
+            "{}",
+            r#"{"ip":"198.51.100.9","country":null}"#,
+            r#"{"ip":"198.51.100.9","country":"USA"}"#,
+            r#"{"ip":"198.51.100.9","country":"12"}"#,
+            r#"{"ip":"198.51.100.10","country":"DE"}"#,
+        ] {
+            let (result, _) = fixture(settings(), body, false);
+            assert_eq!(result.status, Status::Working);
+            assert!(result.country_code.is_none());
+            assert_eq!(result.exit_ip.as_deref(), Some("198.51.100.9"));
+        }
+    }
+
+    #[test]
+    fn cancellation_during_country_lookup_keeps_the_completed_check() {
+        let started = Instant::now();
+        let (result, requests) = fixture(settings(), "", true);
+        assert_eq!(result.status, Status::Working);
+        assert!(result.country_code.is_none());
+        assert_eq!(requests.len(), 2);
+        assert!(started.elapsed() < Duration::from_secs(1));
+    }
 }
 
 #[cfg(test)]

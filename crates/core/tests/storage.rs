@@ -23,6 +23,7 @@ fn custom_preferences() -> Preferences {
             url: "https://check.example/ip?token=fixture-token".into(),
             fallback_url: "http://fallback.example/ip".into(),
             ip_echo: false,
+            country_lookup: false,
             expected_status: 201,
             body_contains: "accepted".into(),
             concurrency: 7,
@@ -43,6 +44,7 @@ fn success(settings: CheckSettings) -> CheckResult {
         latency_ms: Some(25),
         total_duration_ms: 30,
         exit_ip: Some("198.51.100.9".into()),
+        country_code: Some("DE".into()),
         checked_at: "2026-09-06T00:00:00Z".into(),
         code: String::new(),
         stage: "complete".into(),
@@ -120,9 +122,50 @@ fn last_results_keep_their_profile_and_incomplete_checks_do_not_resume() {
         restored.entries[0].result.as_ref().unwrap().settings,
         profile
     );
+    assert_eq!(
+        restored.entries[0]
+            .result
+            .as_ref()
+            .unwrap()
+            .country_code
+            .as_deref(),
+        Some("DE")
+    );
     assert!(!serde_json::to_string(&restored.snapshot(0))
         .unwrap()
         .contains("fixture-token"));
+}
+
+#[test]
+fn backups_without_country_fields_load_with_country_detection_enabled() {
+    let mut source = list("http://proxy.example:8080");
+    source.entries[0].status = Status::Working;
+    source.entries[0].result = Some(success(CheckSettings::default()));
+    let mut json = serde_json::to_value(Backup::capture(&source, BackupScope::Full)).unwrap();
+    fn remove_country_fields(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::Object(object) => {
+                object.remove("countryLookup");
+                object.remove("countryCode");
+                for value in object.values_mut() {
+                    remove_country_fields(value);
+                }
+            }
+            serde_json::Value::Array(array) => array.iter_mut().for_each(remove_country_fields),
+            _ => (),
+        }
+    }
+    remove_country_fields(&mut json);
+    let mut restored = Session::default();
+    Backup::decode(&serde_json::to_vec(&json).unwrap())
+        .unwrap()
+        .apply(&mut restored, RestoreMode::Replace, true)
+        .unwrap();
+    assert!(restored.preferences.check.country_lookup);
+    let result = restored.entries[0].result.as_ref().unwrap();
+    assert_eq!(result.status, Status::Working);
+    assert!(result.settings.country_lookup);
+    assert!(result.country_code.is_none());
 }
 
 #[test]

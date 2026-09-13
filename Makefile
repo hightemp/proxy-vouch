@@ -1,4 +1,4 @@
-.PHONY: help doctor install-deps version version-check dev preview build build-debug package appimage release release-dry-run release-notes test test-release test-integration test-ui test-native test-startup test-storage lint format typecheck quality clean
+.PHONY: help doctor install-deps version version-check dev preview build build-debug package appimage release release-dry-run release-notes test test-release test-dev test-integration test-ui test-native test-startup test-storage lint format typecheck quality clean
 
 help: ## Show available commands
 	@python3 scripts/doctor.py --help-targets
@@ -48,7 +48,10 @@ test: ## Run core contract and property tests
 	cargo test --workspace --locked
 
 test-release: ## Test version synchronization and release publication safeguards
-	node --test scripts/tests/*.test.mjs
+	pnpm test:release
+
+test-dev: ## Test automatic development ports and process cleanup
+	pnpm test:dev
 
 test-startup: ## Check the development WebView with ambient proxy variables (Linux WebDriver required)
 	cargo build -p proxy-vouch --locked
@@ -81,7 +84,7 @@ typecheck: ## Check frontend types
 
 quality: ## Run format, static, contract and protocol checks
 	pnpm format:check
-	$(MAKE) version-check lint test test-release test-integration test-ui
+	$(MAKE) version-check lint test test-release test-dev test-integration test-ui
 
 clean: ## Remove only generated build and test output
 	cargo clean

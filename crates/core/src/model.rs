@@ -140,6 +140,8 @@ pub struct CheckSettings {
     pub url: String,
     pub fallback_url: String,
     pub ip_echo: bool,
+    #[serde(default = "country_lookup_default")]
+    pub country_lookup: bool,
     pub expected_status: u16,
     pub body_contains: String,
     pub concurrency: usize,
@@ -156,6 +158,7 @@ impl Default for CheckSettings {
             url: "https://api64.ipify.org?format=json".into(),
             fallback_url: String::new(),
             ip_echo: true,
+            country_lookup: true,
             expected_status: 200,
             body_contains: String::new(),
             concurrency: 20,
@@ -166,6 +169,10 @@ impl Default for CheckSettings {
             retries: 0,
         }
     }
+}
+
+fn country_lookup_default() -> bool {
+    true
 }
 
 impl CheckSettings {
@@ -234,6 +241,8 @@ pub struct Attempt {
     pub message: String,
     pub duration_ms: u64,
     pub exit_ip: Option<String>,
+    #[serde(default)]
+    pub country_code: Option<String>,
     pub check_url: String,
 }
 
@@ -246,6 +255,8 @@ pub struct CheckResult {
     pub latency_ms: Option<u64>,
     pub total_duration_ms: u64,
     pub exit_ip: Option<String>,
+    #[serde(default)]
+    pub country_code: Option<String>,
     pub checked_at: String,
     pub code: String,
     pub stage: String,

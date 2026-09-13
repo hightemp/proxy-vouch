@@ -15,7 +15,7 @@ import time
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT = dict(url="", fallbackUrl="", ipEcho=True, expectedStatus=200,
+DEFAULT = dict(url="", fallbackUrl="", ipEcho=True, countryLookup=False, expectedStatus=200,
                bodyContains="", concurrency=4, rateLimit=100, connectTimeoutMs=1000,
                attemptTimeoutMs=2000, totalTimeoutMs=15000, retries=0)
 
