@@ -144,6 +144,10 @@ pub struct CheckSettings {
     pub country_lookup: bool,
     #[serde(default = "enabled_by_default")]
     pub anonymity_check: bool,
+    #[serde(default = "enabled_by_default")]
+    pub speed_check: bool,
+    #[serde(default = "default_speed_test_mib")]
+    pub speed_test_mib: u32,
     pub expected_status: u16,
     pub body_contains: String,
     pub concurrency: usize,
@@ -162,6 +166,8 @@ impl Default for CheckSettings {
             ip_echo: true,
             country_lookup: true,
             anonymity_check: true,
+            speed_check: true,
+            speed_test_mib: default_speed_test_mib(),
             expected_status: 200,
             body_contains: String::new(),
             concurrency: 20,
@@ -176,6 +182,10 @@ impl Default for CheckSettings {
 
 fn enabled_by_default() -> bool {
     true
+}
+
+fn default_speed_test_mib() -> u32 {
+    1
 }
 
 impl CheckSettings {
@@ -200,6 +210,7 @@ impl CheckSettings {
             }
         }
         if self.url.is_empty()
+            || !(1..=32).contains(&self.speed_test_mib)
             || !(1..=200).contains(&self.concurrency)
             || !(1..=100).contains(&self.rate_limit)
             || !(1000..=30000).contains(&self.connect_timeout_ms)
@@ -210,7 +221,7 @@ impl CheckSettings {
             || self.retries > 2
             || !(100..=599).contains(&self.expected_status)
         {
-            return Err(AppError::new("INVALID_SETTINGS", "Check the limits: connect timeout ≤ attempt timeout ≤ total timeout; concurrency 1–200; rate 1–100; retries 0–2."));
+            return Err(AppError::new("INVALID_SETTINGS", "Check the limits: connect timeout ≤ attempt timeout ≤ total timeout; concurrency 1–200; rate 1–100; retries 0–2; speed sample 1–32 MiB."));
         }
         Ok(())
     }
@@ -267,6 +278,37 @@ pub enum AnonymityLevel {
     Unknown,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TransferOutcome {
+    Completed,
+    Partial,
+    Failed,
+    Cancelled,
+    Skipped,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TransferLimit {
+    NotObserved,
+    Signaled,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeedResult {
+    pub outcome: TransferOutcome,
+    pub download_mbps: Option<f64>,
+    pub requested_bytes: u64,
+    pub received_bytes: u64,
+    pub duration_ms: u64,
+    pub limit: TransferLimit,
+    pub http_status: Option<u32>,
+    pub proxy_http_status: Option<u32>,
+    pub check_url: String,
+    pub message: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckResult {
@@ -280,6 +322,8 @@ pub struct CheckResult {
     pub country_code: Option<String>,
     #[serde(default)]
     pub anonymity: Option<AnonymityResult>,
+    #[serde(default)]
+    pub speed: Option<SpeedResult>,
     pub checked_at: String,
     pub code: String,
     pub stage: String,

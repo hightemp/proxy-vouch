@@ -104,6 +104,7 @@ async def main():
                 await driver.fill(".modal .full-label input", check_url)
                 await select("Appearance", "dark")
                 await driver.js("const checkbox=[...document.querySelectorAll('.checkbox-label')].find(el=>el.textContent.includes('Check proxy anonymity')).querySelector('input'); if(checkbox.checked) checkbox.click();")
+                await driver.js("const checkbox=[...document.querySelectorAll('.checkbox-label')].find(el=>el.textContent.includes('Check download speed and transfer limits')).querySelector('input'); if(checkbox.checked) checkbox.click();")
                 await driver.click("Save settings")
                 await driver.wait("return !document.querySelector('dialog');")
                 preferences = await driver.ipc("load_preferences")

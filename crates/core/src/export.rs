@@ -207,6 +207,17 @@ pub fn render(entries: &[Entry], options: &ExportOptions) -> AppResult<Payload> 
                 value["anonymity_check_url"] = json!(anonymity.map(|a| &a.check_url));
                 value["anonymity_observed_ip"] = json!(anonymity.and_then(|a| a.observed_ip.as_ref()));
                 value["anonymity_proxy_headers"] = json!(anonymity.map(|a| &a.proxy_headers));
+                let speed = result.and_then(|r| r.speed.as_ref());
+                value["download_mbps"] = json!(speed.and_then(|s| s.download_mbps));
+                value["transfer_outcome"] = json!(speed.map(|s| s.outcome));
+                value["transfer_requested_bytes"] = json!(speed.map(|s| s.requested_bytes));
+                value["transfer_received_bytes"] = json!(speed.map(|s| s.received_bytes));
+                value["transfer_duration_ms"] = json!(speed.map(|s| s.duration_ms));
+                value["transfer_limit"] = json!(speed.map(|s| s.limit));
+                value["transfer_message"] = json!(speed.map(|s| &s.message));
+                value["transfer_http_status"] = json!(speed.and_then(|s| s.http_status));
+                value["transfer_proxy_http_status"] = json!(speed.and_then(|s| s.proxy_http_status));
+                value["transfer_check_url"] = json!(speed.map(|s| &s.check_url));
                 if options.credentials {
                     value["username"] = json!(proxy.and_then(|p|p.credentials.as_ref()).map(|a|&a.username));
                     value["password"] = json!(proxy.and_then(|p|p.credentials.as_ref()).and_then(|a|a.password.as_ref()));

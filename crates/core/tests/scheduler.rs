@@ -304,6 +304,7 @@ fn scheduler_obeys_concurrency_and_completes_all_requests() {
         url: "http://check.invalid/".into(),
         country_lookup: false,
         anonymity_check: false,
+        speed_check: false,
         concurrency: 2,
         rate_limit: 100,
         ..CheckSettings::default()
@@ -339,6 +340,7 @@ fn scheduler_applies_the_global_rate_limit_across_workers() {
         url: "http://check.invalid/".into(),
         country_lookup: false,
         anonymity_check: false,
+        speed_check: false,
         concurrency: 6,
         rate_limit: 10,
         ..CheckSettings::default()
@@ -378,6 +380,7 @@ fn cancellation_releases_workers_and_prevents_mutation_during_a_run() {
         url: "http://check.invalid/".into(),
         country_lookup: false,
         anonymity_check: false,
+        speed_check: false,
         concurrency: 2,
         rate_limit: 100,
         ..CheckSettings::default()

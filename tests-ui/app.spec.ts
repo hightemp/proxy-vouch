@@ -26,6 +26,21 @@ async function previewWithRows(page: Page) {
             totalDurationMs: 35,
             exitIp: `198.51.100.${index + 1}`,
             countryCode,
+            speed: {
+              outcome: index === 0 ? "Completed" : "Failed",
+              downloadMbps: index === 0 ? 8.39 : null,
+              requestedBytes: 1_048_576,
+              receivedBytes: index === 0 ? 1_048_576 : 0,
+              durationMs: index === 0 ? 1000 : 100,
+              limit: index === 0 ? "NotObserved" : "Signaled",
+              httpStatus: index === 0 ? 200 : 429,
+              proxyHttpStatus: null,
+              checkUrl: "https://download.example/data",
+              message:
+                index === 0
+                  ? "The sample passed; total traffic quota is unknown."
+                  : "The download endpoint returned HTTP 429; proxy traffic quota is unknown.",
+            },
             anonymity: {
               level: index === 0 ? "Elite" : "Transparent",
               message:
@@ -247,6 +262,105 @@ test("anonymity is enabled by default and disabling it is saved for the next che
   >("window.testCalls.filter(call => call.command === 'start_check')");
   expect(calls).toHaveLength(1);
   expect(calls[0].args.settings.anonymityCheck).toBe(false);
+});
+
+for (const width of [1000, 1320]) {
+  test(`speed, tested volume and limit responses fit a ${width}px window`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 650 });
+    await previewWithRows(page);
+    await expect(
+      page.locator(".proxy-row").first().locator(".speed-cell"),
+    ).toContainText("8.39 Mbps");
+    await expect(
+      page.locator(".proxy-row").first().locator(".speed-cell"),
+    ).toContainText("Passed 1 MiB");
+    await expect(
+      page.locator(".proxy-row").nth(1).locator(".speed-cell"),
+    ).toContainText("Limit response");
+    await expect(
+      page.locator(".proxy-row").nth(1).locator(".status-working"),
+    ).toBeVisible();
+    await expect(
+      page.locator(".proxy-row").nth(2).locator(".speed-cell"),
+    ).toHaveText("—");
+    const layout = await page
+      .locator(".proxy-row")
+      .first()
+      .evaluate((row) => ({
+        rowRight: row.getBoundingClientRect().right,
+        lastRight: row.lastElementChild!.getBoundingClientRect().right,
+        viewport: innerWidth,
+        content: document.documentElement.scrollWidth,
+      }));
+    expect(layout.lastRight).toBeLessThanOrEqual(layout.rowRight);
+    expect(layout.content).toBeLessThanOrEqual(layout.viewport);
+    await page.getByLabel("Sort proxies").selectOption("speed");
+    await expect(
+      page.locator(".proxy-row").first().locator(".speed-cell"),
+    ).toContainText("8.39 Mbps");
+    await page.screenshot({
+      path: `artifacts/speed-volume-${width}.png`,
+      fullPage: true,
+    });
+    await page.getByLabel("Search proxies").fill("limit");
+    await expect(page.locator(".proxy-row")).toHaveCount(1);
+    await page
+      .getByLabel("Details for proxy2.example:8080", { exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "proxy2.example:8080" });
+    await expect(
+      dialog.getByText("Download speed and transfer test", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText(
+        "The download endpoint returned HTTP 429; proxy traffic quota is unknown.",
+      ),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText("Total / remaining traffic quota", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText("Unknown — requires provider information", {
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
+}
+
+test("speed testing defaults on and saves the selected sample size and disabled state", async ({
+  page,
+}) => {
+  await previewWithRows(page);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByLabel("Check download speed and transfer limits"),
+  ).toBeChecked();
+  await expect(page.getByLabel("Speed test size (MiB)")).toHaveValue("1");
+  await page.getByLabel("Speed test size (MiB)").fill("4");
+  await page.getByLabel("Check download speed and transfer limits").uncheck();
+  await expect(page.getByLabel("Speed test size (MiB)")).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Save settings", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByLabel("Check download speed and transfer limits"),
+  ).not.toBeChecked();
+  await expect(page.getByLabel("Speed test size (MiB)")).toHaveValue("4");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Check all", exact: true }).click();
+  const calls = await page.evaluate<
+    { args: { settings: { speedCheck: boolean; speedTestMib: number } } }[]
+  >("window.testCalls.filter(call => call.command === 'start_check')");
+  expect(calls).toHaveLength(1);
+  expect(calls[0].args.settings).toMatchObject({
+    speedCheck: false,
+    speedTestMib: 4,
+  });
 });
 
 test("browser preview makes the desktop requirement clear", async ({

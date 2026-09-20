@@ -115,7 +115,7 @@ async def main():
                         await driver.ipc("preview_import", {"text": proxy, "options": {}})
                         await driver.ipc("commit_import", {"replace": False, "keepDuplicates": False, "includeInvalid": False})
                         snapshot = await driver.ipc("snapshot", {"since": 0})
-                        settings = dict(url="http://127.0.0.1:1420/", fallbackUrl="", ipEcho=False, countryLookup=False, anonymityCheck=False, expectedStatus=200, bodyContains="ProxyVouch", concurrency=1, rateLimit=10, connectTimeoutMs=1000, attemptTimeoutMs=2000, totalTimeoutMs=5000, retries=0)
+                        settings = dict(url="http://127.0.0.1:1420/", fallbackUrl="", ipEcho=False, countryLookup=False, anonymityCheck=False, speedCheck=False, expectedStatus=200, bodyContains="ProxyVouch", concurrency=1, rateLimit=10, connectTimeoutMs=1000, attemptTimeoutMs=2000, totalTimeoutMs=5000, retries=0)
                         await driver.ipc("start_check", {"ids": [row["id"] for row in snapshot["rows"]], "settings": settings, "detectAgain": False})
                         for _ in range(100):
                             snapshot = await driver.ipc("snapshot", {"since": 0})

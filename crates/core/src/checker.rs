@@ -17,6 +17,7 @@ use std::{
 };
 
 mod anonymity;
+mod speed;
 
 /// Per-run cancellation, request pacing and endpoint health, shared by all workers.
 pub struct Control {
@@ -24,6 +25,7 @@ pub struct Control {
     next_request: Mutex<Instant>,
     endpoints: Mutex<HashMap<String, VecDeque<bool>>>,
     anonymity: anonymity::Lookup,
+    speed: speed::Check,
     /// Explicit trust anchor used by controlled fixtures; never exposed as a TLS bypass.
     pub ca_file: Option<PathBuf>,
 }
@@ -35,6 +37,7 @@ impl Default for Control {
             next_request: Mutex::new(Instant::now()),
             endpoints: Mutex::new(HashMap::new()),
             anonymity: anonymity::Lookup::default(),
+            speed: speed::Check::default(),
             ca_file: None,
         }
     }
@@ -279,7 +282,7 @@ fn cancelled_attempt(protocol: Protocol, url: &str, control: &Control) -> Attemp
     }
 }
 
-fn restrict_socks_auth(easy: &mut Easy2<Response>) -> Result<(), curl::Error> {
+fn restrict_socks_auth<H: Handler>(easy: &mut Easy2<H>) -> Result<(), curl::Error> {
     // curl's safe wrapper does not expose CURLOPT_SOCKS5_AUTH. Its stable value
     // is CURLOPTTYPE_LONG + 267 in both the system and bundled curl headers.
     const SOCKS5_AUTH: curl_sys::CURLoption = curl_sys::CURLOPTTYPE_LONG + 267;
@@ -299,8 +302,8 @@ fn restrict_socks_auth(easy: &mut Easy2<Response>) -> Result<(), curl::Error> {
     }
 }
 
-fn configure_request(
-    easy: &mut Easy2<Response>,
+fn configure_request<H: Handler>(
+    easy: &mut Easy2<H>,
     route: Option<(&Proxy, Protocol)>,
     url: &str,
     settings: &CheckSettings,
@@ -819,6 +822,7 @@ fn check_with_country_url(
         exit_ip: None,
         country_code: None,
         anonymity: None,
+        speed: None,
         checked_at: chrono::Utc::now().to_rfc3339(),
         code: "PROTOCOL_NOT_DETECTED".into(),
         stage: "protocol".into(),
@@ -881,6 +885,15 @@ fn check_with_country_url(
             result.anonymity = Some(
                 control
                     .anonymity
+                    .check(proxy, protocol, settings, control, deadline),
+            );
+        }
+    }
+    if settings.speed_check && result.status == Status::Working {
+        if let Some(protocol) = result.detected {
+            result.speed = Some(
+                control
+                    .speed
                     .check(proxy, protocol, settings, control, deadline),
             );
         }
@@ -979,6 +992,7 @@ mod country_tests {
         CheckSettings {
             url: "http://check.invalid/".into(),
             anonymity_check: false,
+            speed_check: false,
             rate_limit: 100,
             ..CheckSettings::default()
         }

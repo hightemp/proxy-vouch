@@ -1,5 +1,8 @@
 use proxy_vouch_core::{
-    model::{AnonymityLevel, AnonymityResult, CheckResult, CheckSettings, Protocol, Status},
+    model::{
+        AnonymityLevel, AnonymityResult, CheckResult, CheckSettings, Protocol, SpeedResult, Status,
+        TransferLimit, TransferOutcome,
+    },
     parser::ImportOptions,
     session::{Session, SharedSession},
     storage::{Backup, BackupScope, Preferences, RestoreMode, Store},
@@ -25,6 +28,8 @@ fn custom_preferences() -> Preferences {
             ip_echo: false,
             country_lookup: false,
             anonymity_check: false,
+            speed_check: false,
+            speed_test_mib: 4,
             expected_status: 201,
             body_contains: "accepted".into(),
             concurrency: 7,
@@ -52,6 +57,19 @@ fn success(settings: CheckSettings) -> CheckResult {
             check_url: "http://judge.example/get".into(),
             observed_ip: Some("198.51.100.9".into()),
             proxy_headers: vec!["via".into()],
+        }),
+        speed: Some(SpeedResult {
+            outcome: TransferOutcome::Completed,
+            download_mbps: Some(8.388608),
+            requested_bytes: 1_048_576,
+            received_bytes: 1_048_576,
+            duration_ms: 1000,
+            limit: TransferLimit::NotObserved,
+            http_status: Some(200),
+            proxy_http_status: None,
+            check_url: "https://download.example/data".into(),
+            message: "The selected sample was received in full; total traffic quota is unknown."
+                .into(),
         }),
         checked_at: "2026-09-06T00:00:00Z".into(),
         code: String::new(),
@@ -151,6 +169,16 @@ fn last_results_keep_their_profile_and_incomplete_checks_do_not_resume() {
         .unwrap();
     assert_eq!(anonymity.level, AnonymityLevel::Anonymous);
     assert_eq!(anonymity.proxy_headers, vec!["via"]);
+    let speed = restored.entries[0]
+        .result
+        .as_ref()
+        .unwrap()
+        .speed
+        .as_ref()
+        .unwrap();
+    assert_eq!(speed.download_mbps, Some(8.388608));
+    assert_eq!(speed.received_bytes, 1_048_576);
+    assert_eq!(speed.limit, TransferLimit::NotObserved);
 }
 
 #[test]
@@ -166,6 +194,9 @@ fn backups_without_optional_check_fields_load_with_detection_enabled() {
                 object.remove("countryCode");
                 object.remove("anonymityCheck");
                 object.remove("anonymity");
+                object.remove("speedCheck");
+                object.remove("speedTestMib");
+                object.remove("speed");
                 for value in object.values_mut() {
                     remove_country_fields(value);
                 }
@@ -188,6 +219,11 @@ fn backups_without_optional_check_fields_load_with_detection_enabled() {
     assert!(result.country_code.is_none());
     assert!(result.settings.anonymity_check);
     assert!(result.anonymity.is_none());
+    assert!(restored.preferences.check.speed_check);
+    assert_eq!(restored.preferences.check.speed_test_mib, 1);
+    assert!(result.settings.speed_check);
+    assert_eq!(result.settings.speed_test_mib, 1);
+    assert!(result.speed.is_none());
 }
 
 #[test]
@@ -211,7 +247,31 @@ fn reports_include_anonymity_without_credentials() {
         assert!(report.contains("Anonymous"));
         assert!(report.contains("http://judge.example/get"));
         assert!(report.contains("via"));
+        assert!(report.contains("8.388608"));
+        assert!(report.contains("1048576"));
+        assert!(report.contains("NotObserved"));
+        assert!(report.contains("https://download.example/data"));
         assert!(!report.contains("fixture-password"));
+    }
+}
+
+#[test]
+fn speed_sample_size_is_bounded() {
+    for size in [0, 33, u32::MAX] {
+        assert!(CheckSettings {
+            speed_test_mib: size,
+            ..CheckSettings::default()
+        }
+        .validate()
+        .is_err());
+    }
+    for size in [1, 4, 32] {
+        assert!(CheckSettings {
+            speed_test_mib: size,
+            ..CheckSettings::default()
+        }
+        .validate()
+        .is_ok());
     }
 }
 

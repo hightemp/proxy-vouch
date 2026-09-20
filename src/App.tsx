@@ -181,6 +181,45 @@ function Anonymity({ row }: { row: Row }) {
   );
 }
 
+function formatBytes(bytes: number) {
+  const unit = bytes >= 1024 * 1024 ? "MiB" : bytes >= 1024 ? "KiB" : "B";
+  const divisor = unit === "MiB" ? 1024 * 1024 : unit === "KiB" ? 1024 : 1;
+  return `${(bytes / divisor).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`;
+}
+
+function Speed({ row }: { row: Row }) {
+  const check = row.result?.speed;
+  if (!check)
+    return (
+      <span
+        className="speed-cell"
+        title="Speed and transfer limits not checked"
+      >
+        —
+      </span>
+    );
+  const label =
+    check.limit === "Signaled"
+      ? "Limit response"
+      : check.outcome === "Completed"
+        ? `Passed ${formatBytes(check.receivedBytes)}`
+        : check.outcome === "Partial"
+          ? `Partial ${formatBytes(check.receivedBytes)}`
+          : check.outcome === "Failed"
+            ? "Not measured"
+            : check.outcome;
+  return (
+    <span className="speed-cell" title={check.message}>
+      <span>
+        {check.downloadMbps != null
+          ? `${check.downloadMbps.toLocaleString(undefined, { maximumFractionDigits: 2 })} Mbps`
+          : "—"}
+      </span>
+      <small>{label}</small>
+    </span>
+  );
+}
+
 export default function App() {
   const [rows, setRows] = useState<Row[]>([]);
   const rowMap = useRef(new Map<number, Row>());
@@ -340,6 +379,11 @@ export default function App() {
           (a.result?.latencyMs ?? Infinity) -
             (b.result?.latencyMs ?? Infinity) || a.id - b.id
         );
+      if (sort === "speed")
+        return (
+          (b.result?.speed?.downloadMbps ?? -Infinity) -
+            (a.result?.speed?.downloadMbps ?? -Infinity) || a.id - b.id
+        );
       if (sort === "checked")
         return (
           (b.result?.checkedAt ?? "").localeCompare(
@@ -375,7 +419,7 @@ export default function App() {
       (row) =>
         (filter === "All" || row.status === filter) &&
         (!q ||
-          `${row.address} ${row.username} ${row.label} ${row.result?.countryCode ?? ""} ${row.result?.anonymity?.level ?? ""}`
+          `${row.address} ${row.username} ${row.label} ${row.result?.countryCode ?? ""} ${row.result?.anonymity?.level ?? ""} ${row.result?.speed?.outcome ?? ""} ${row.result?.speed?.limit === "Signaled" ? "limit response" : ""}`
             .toLowerCase()
             .includes(q)),
     );
@@ -931,6 +975,7 @@ export default function App() {
             <button onClick={() => setSort("latency")}>
               LATENCY <ArrowUpDown size={12} />
             </button>
+            <button onClick={() => setSort("speed")}>SPEED / VOLUME</button>
             <button onClick={() => setSort("country")}>COUNTRY</button>
             <span className="exit-ip-heading">EXIT IP</span>
             <button
@@ -1021,6 +1066,7 @@ export default function App() {
                       />
                       <button
                         className="address-button"
+                        title={row.address}
                         onClick={() => {
                           setDetailId(row.id);
                           setRawText(null);
@@ -1028,7 +1074,7 @@ export default function App() {
                         }}
                       >
                         <span>
-                          {row.address}
+                          <span className="address-text">{row.address}</span>
                           {row.hasCredentials && <LockKeyhole size={12} />}
                         </span>
                         <small>
@@ -1062,6 +1108,7 @@ export default function App() {
                           "—"
                         )}
                       </span>
+                      <Speed row={row} />
                       <Country code={row.result?.countryCode} />
                       <span className="mono exit-ip">
                         {row.result?.exitIp ?? "—"}
@@ -1120,6 +1167,7 @@ export default function App() {
                 <option value="anonymity">Anonymity</option>
                 <option value="country">Country</option>
                 <option value="latency">Fastest first</option>
+                <option value="speed">Highest download speed</option>
                 <option value="checked">Recently checked</option>
               </select>
             </label>
@@ -1537,6 +1585,38 @@ export default function App() {
               headers. This measures HTTP traffic only, not anonymity for every
               use. Disable this to skip both the direct reference and anonymity
               requests.
+            </p>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={draft.speedCheck}
+                onChange={(e) =>
+                  setDraft({ ...draft, speedCheck: e.target.checked })
+                }
+              />
+              Check download speed and transfer limits
+            </label>
+            <label className="full-label">
+              Speed test size (MiB)
+              <input
+                type="number"
+                min={1}
+                max={32}
+                step={1}
+                disabled={!draft.speedCheck}
+                value={draft.speedTestMib}
+                onChange={(e) =>
+                  setDraft({ ...draft, speedTestMib: Number(e.target.value) })
+                }
+              />
+            </label>
+            <p className="hint">
+              Downloads up to {draft.speedTestMib} MiB per working proxy from
+              Cloudflare, plus protocol overhead. Tests run one at a time and
+              respect your timeouts, with at most 10 seconds per download. Speed
+              is the sample average, including connection setup. Passing the
+              sample does not prove unlimited traffic; the provider's total or
+              remaining quota cannot be determined by this test.
             </p>
             <div className="form-grid">
               <label>
@@ -2079,6 +2159,69 @@ export default function App() {
                     {detail.result.anonymity.proxyHeaders.join(", ")}
                   </p>
                 )}
+              </div>
+            )}
+            {detail.result?.speed && (
+              <div className="result-message speed-details">
+                <strong>Download speed and transfer test</strong>
+                <p>{detail.result.speed.message}</p>
+                <dl className="detail-grid">
+                  <div>
+                    <dt>Average download speed</dt>
+                    <dd>
+                      {detail.result.speed.downloadMbps != null
+                        ? `${detail.result.speed.downloadMbps.toLocaleString(undefined, { maximumFractionDigits: 2 })} Mbps`
+                        : "Not measured"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Transfer outcome</dt>
+                    <dd>{detail.result.speed.outcome}</dd>
+                  </div>
+                  <div>
+                    <dt>Sample received / requested</dt>
+                    <dd>
+                      {detail.result.speed.receivedBytes.toLocaleString()} /{" "}
+                      {detail.result.speed.requestedBytes.toLocaleString()}{" "}
+                      bytes
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Download duration</dt>
+                    <dd>
+                      {(detail.result.speed.durationMs / 1000).toLocaleString(
+                        undefined,
+                        { maximumFractionDigits: 3 },
+                      )}{" "}
+                      s
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Transfer limit observation</dt>
+                    <dd>
+                      {detail.result.speed.limit === "NotObserved"
+                        ? "No limit observed in this sample"
+                        : detail.result.speed.limit === "Signaled"
+                          ? "Limit-related HTTP response"
+                          : "Not determined"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Total / remaining traffic quota</dt>
+                    <dd>Unknown — requires provider information</dd>
+                  </div>
+                  <div>
+                    <dt>Endpoint HTTP status</dt>
+                    <dd>{detail.result.speed.httpStatus ?? "Not received"}</dd>
+                  </div>
+                  {detail.result.speed.proxyHttpStatus != null && (
+                    <div>
+                      <dt>Proxy CONNECT status</dt>
+                      <dd>{detail.result.speed.proxyHttpStatus}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p>Check URL: {detail.result.speed.checkUrl}</p>
               </div>
             )}
             {detail.error && <ErrorText error={detail.error.message} />}

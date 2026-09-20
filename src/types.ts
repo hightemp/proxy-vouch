@@ -42,12 +42,25 @@ export interface CheckResult {
   exitIp: string | null;
   countryCode: string | null;
   anonymity: AnonymityResult | null;
+  speed: SpeedResult | null;
   checkedAt: string;
   code: string;
   stage: string;
   message: string;
   checkUrl: string;
   attempts: Attempt[];
+}
+export interface SpeedResult {
+  outcome: "Completed" | "Partial" | "Failed" | "Cancelled" | "Skipped";
+  downloadMbps: number | null;
+  requestedBytes: number;
+  receivedBytes: number;
+  durationMs: number;
+  limit: "NotObserved" | "Signaled" | "Unknown";
+  httpStatus: number | null;
+  proxyHttpStatus: number | null;
+  checkUrl: string;
+  message: string;
 }
 export interface Row {
   id: number;
@@ -90,6 +103,8 @@ export interface Settings {
   ipEcho: boolean;
   countryLookup: boolean;
   anonymityCheck: boolean;
+  speedCheck: boolean;
+  speedTestMib: number;
   expectedStatus: number;
   bodyContains: string;
   concurrency: number;
@@ -139,6 +154,8 @@ export const defaultSettings: Settings = {
   ipEcho: true,
   countryLookup: true,
   anonymityCheck: true,
+  speedCheck: true,
+  speedTestMib: 1,
   expectedStatus: 200,
   bodyContains: "",
   concurrency: 20,

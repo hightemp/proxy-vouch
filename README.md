@@ -86,6 +86,14 @@ The **Anonymity** column can be sorted and searched. Details explain the result,
 
 The judge's own forwarding headers are compared against the direct reference to avoid treating its infrastructure as evidence of a proxy. Anonymity uses HTTP forwarding because a CONNECT tunnel conceals proxy-added HTTP headers. It describes that request only: HTTPS, other destinations, changing IP addresses and other forms of identification can behave differently. Existing HTTP/HTTPS/SOCKS protocol detection remains separate.
 
+**Check download speed and transfer limits** is enabled by default. Each working proxy downloads a bounded binary sample from [Cloudflare's speed-test endpoint](https://github.com/cloudflare/speedtest). The default is **1 MiB per proxy**, adjustable from 1 to 32 MiB in Settings, plus connection/TLS overhead. Turning the option off skips the download. Payloads are counted and discarded instead of buffered in memory; compressed or non-binary responses are rejected as speed samples.
+
+The **Speed / volume** column shows average download Mbps and whether the selected sample passed, was partial, or encountered a limit-related response. Sort by download speed or search `limit` to find reported limit responses. Details and CSV/JSON reports include requested/received bytes, elapsed time, endpoint and proxy CONNECT status codes, and the reason for failure. Speed is received payload bits divided by the entire request time, including connection setup and server wait, excluding time spent queued. It is an observed sample average, not a maximum link speed or an upload-speed measurement.
+
+Speed downloads run one at a time within a check run to avoid competing with each other. They obey cancellation, configured connection/attempt timeouts, the remaining total check deadline and a ten-second cap per download. If the sample waits too long for another download, increase the total timeout or reduce concurrent checks. An unsuccessful speed test never changes an already verified availability result or request latency.
+
+**Traffic quotas cannot be determined by a short download.** A completed sample means only that this amount transferred successfully; it does not prove unlimited traffic or reveal a monthly/daily quota, remaining allowance, or reset time. HTTP 413, 429 and 509 are reported as limit-related responses, with the responding layer identified: a destination rate limit is not evidence of a proxy account quota. Timeouts and truncated responses leave the quota unknown. Provider-specific allowance requires information from the provider.
+
 | Status | Meaning |
 | --- | --- |
 | Working | A real request passed the selected profile |

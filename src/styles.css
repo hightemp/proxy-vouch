@@ -526,7 +526,7 @@ h1 {
 .proxy-row {
   display: grid;
   grid-template-columns:
-    20px minmax(135px, 1.6fr) 76px 94px 100px 60px 60px minmax(90px, 1fr)
+    20px minmax(135px, 1.6fr) 76px 94px 100px 60px 102px 60px minmax(90px, 1fr)
     86px 25px;
   align-items: center;
   column-gap: 8px;
@@ -556,6 +556,21 @@ h1 {
   white-space: nowrap;
 }
 .anonymity-details {
+  margin-bottom: 16px;
+}
+.speed-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 11px;
+  white-space: nowrap;
+  gap: 4px;
+}
+.speed-cell small {
+  font-size: 9px;
+  color: var(--muted);
+}
+.speed-details {
   margin-bottom: 16px;
 }
 .table-head button {
@@ -722,6 +737,11 @@ h1 {
   font-weight: 400;
   color: #9ba591;
   max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.address-button .address-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1362,7 +1382,7 @@ code {
     opacity: 0.35;
   }
 }
-@media (max-width: 1250px) {
+@media (max-width: 1280px) {
   .sidebar {
     width: 190px;
   }
@@ -1378,9 +1398,9 @@ code {
   .table-head,
   .proxy-row {
     grid-template-columns:
-      20px minmax(120px, 1.5fr) 74px 94px 100px 60px 60px minmax(85px, 1fr)
+      20px minmax(116px, 1.5fr) 64px 78px 94px 48px 102px 46px minmax(74px, 1fr)
       24px;
-    column-gap: 7px;
+    column-gap: 6px;
     padding-left: 17px;
     padding-right: 17px;
   }

@@ -221,6 +221,7 @@ impl Fixture {
                 url: "http://check.invalid/".into(),
                 country_lookup: false,
                 anonymity_check: enabled,
+                speed_check: false,
                 rate_limit: 100,
                 ..CheckSettings::default()
             },
