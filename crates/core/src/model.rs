@@ -140,8 +140,10 @@ pub struct CheckSettings {
     pub url: String,
     pub fallback_url: String,
     pub ip_echo: bool,
-    #[serde(default = "country_lookup_default")]
+    #[serde(default = "enabled_by_default")]
     pub country_lookup: bool,
+    #[serde(default = "enabled_by_default")]
+    pub anonymity_check: bool,
     pub expected_status: u16,
     pub body_contains: String,
     pub concurrency: usize,
@@ -159,6 +161,7 @@ impl Default for CheckSettings {
             fallback_url: String::new(),
             ip_echo: true,
             country_lookup: true,
+            anonymity_check: true,
             expected_status: 200,
             body_contains: String::new(),
             concurrency: 20,
@@ -171,7 +174,7 @@ impl Default for CheckSettings {
     }
 }
 
-fn country_lookup_default() -> bool {
+fn enabled_by_default() -> bool {
     true
 }
 
@@ -248,6 +251,24 @@ pub struct Attempt {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AnonymityResult {
+    pub level: AnonymityLevel,
+    pub message: String,
+    pub check_url: String,
+    pub observed_ip: Option<String>,
+    pub proxy_headers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AnonymityLevel {
+    Transparent,
+    Anonymous,
+    Elite,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckResult {
     pub status: Status,
     pub detected: Option<Protocol>,
@@ -257,6 +278,8 @@ pub struct CheckResult {
     pub exit_ip: Option<String>,
     #[serde(default)]
     pub country_code: Option<String>,
+    #[serde(default)]
+    pub anonymity: Option<AnonymityResult>,
     pub checked_at: String,
     pub code: String,
     pub stage: String,

@@ -103,6 +103,7 @@ async def main():
             await driver.fill(".modal .full-label input", f"http://127.0.0.1:{target}/")
             await driver.js("const select=[...document.querySelectorAll('.modal select')].find(e=>e.querySelector('option[value=light]')); select.value='light';select.dispatchEvent(new Event('change',{bubbles:true}));")
             await driver.js("const checkbox=[...document.querySelectorAll('.checkbox-label')].find(el=>el.textContent.includes('Detect proxy country')).querySelector('input'); if(checkbox.checked) checkbox.click();")
+            await driver.js("const checkbox=[...document.querySelectorAll('.checkbox-label')].find(el=>el.textContent.includes('Check proxy anonymity')).querySelector('input'); if(checkbox.checked) checkbox.click();")
             await driver.click("Save settings")
             await driver.wait("return !document.querySelector('dialog');")
             await driver.click("Add proxies")
@@ -209,7 +210,7 @@ async def main():
             await driver.fill("input[aria-label='Search proxies']", "")
             await driver.wait("return document.querySelectorAll('.proxy-row').length===6;")
             # Use actual IPC for a controlled hanging run, then the visible Stop button.
-            settings = dict(url=f"http://127.0.0.1:{target}/slow",fallbackUrl="",ipEcho=True,countryLookup=False,expectedStatus=200,bodyContains="",concurrency=2,rateLimit=100,connectTimeoutMs=1000,attemptTimeoutMs=8000,totalTimeoutMs=15000,retries=0)
+            settings = dict(url=f"http://127.0.0.1:{target}/slow",fallbackUrl="",ipEcho=True,countryLookup=False,anonymityCheck=False,expectedStatus=200,bodyContains="",concurrency=2,rateLimit=100,connectTimeoutMs=1000,attemptTimeoutMs=8000,totalTimeoutMs=15000,retries=0)
             await driver.ipc("start_check", {"ids":[row["id"] for row in snapshot["rows"] if row["status"] == "Working"],"settings":settings,"detectAgain":False})
             await driver.wait("return [...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Stop checking');")
             start = asyncio.get_running_loop().time()

@@ -1,5 +1,5 @@
 use proxy_vouch_core::{
-    model::{CheckResult, CheckSettings, Protocol, Status},
+    model::{AnonymityLevel, AnonymityResult, CheckResult, CheckSettings, Protocol, Status},
     parser::ImportOptions,
     session::{Session, SharedSession},
     storage::{Backup, BackupScope, Preferences, RestoreMode, Store},
@@ -24,6 +24,7 @@ fn custom_preferences() -> Preferences {
             fallback_url: "http://fallback.example/ip".into(),
             ip_echo: false,
             country_lookup: false,
+            anonymity_check: false,
             expected_status: 201,
             body_contains: "accepted".into(),
             concurrency: 7,
@@ -45,6 +46,13 @@ fn success(settings: CheckSettings) -> CheckResult {
         total_duration_ms: 30,
         exit_ip: Some("198.51.100.9".into()),
         country_code: Some("DE".into()),
+        anonymity: Some(AnonymityResult {
+            level: AnonymityLevel::Anonymous,
+            message: "A proxy indicator was observed.".into(),
+            check_url: "http://judge.example/get".into(),
+            observed_ip: Some("198.51.100.9".into()),
+            proxy_headers: vec!["via".into()],
+        }),
         checked_at: "2026-09-06T00:00:00Z".into(),
         code: String::new(),
         stage: "complete".into(),
@@ -134,10 +142,19 @@ fn last_results_keep_their_profile_and_incomplete_checks_do_not_resume() {
     assert!(!serde_json::to_string(&restored.snapshot(0))
         .unwrap()
         .contains("fixture-token"));
+    let anonymity = restored.entries[0]
+        .result
+        .as_ref()
+        .unwrap()
+        .anonymity
+        .as_ref()
+        .unwrap();
+    assert_eq!(anonymity.level, AnonymityLevel::Anonymous);
+    assert_eq!(anonymity.proxy_headers, vec!["via"]);
 }
 
 #[test]
-fn backups_without_country_fields_load_with_country_detection_enabled() {
+fn backups_without_optional_check_fields_load_with_detection_enabled() {
     let mut source = list("http://proxy.example:8080");
     source.entries[0].status = Status::Working;
     source.entries[0].result = Some(success(CheckSettings::default()));
@@ -147,6 +164,8 @@ fn backups_without_country_fields_load_with_country_detection_enabled() {
             serde_json::Value::Object(object) => {
                 object.remove("countryLookup");
                 object.remove("countryCode");
+                object.remove("anonymityCheck");
+                object.remove("anonymity");
                 for value in object.values_mut() {
                     remove_country_fields(value);
                 }
@@ -162,10 +181,38 @@ fn backups_without_country_fields_load_with_country_detection_enabled() {
         .apply(&mut restored, RestoreMode::Replace, true)
         .unwrap();
     assert!(restored.preferences.check.country_lookup);
+    assert!(restored.preferences.check.anonymity_check);
     let result = restored.entries[0].result.as_ref().unwrap();
     assert_eq!(result.status, Status::Working);
     assert!(result.settings.country_lookup);
     assert!(result.country_code.is_none());
+    assert!(result.settings.anonymity_check);
+    assert!(result.anonymity.is_none());
+}
+
+#[test]
+fn reports_include_anonymity_without_credentials() {
+    use proxy_vouch_core::export::{render, ExportOptions};
+    let mut source = list("http://user:fixture-password@proxy.example:8080");
+    source.entries[0].status = Status::Working;
+    source.entries[0].result = Some(success(CheckSettings::default()));
+    for format in ["json", "csv"] {
+        let report = render(
+            &source.entries,
+            &ExportOptions {
+                scope: "All".into(),
+                format: format.into(),
+                credentials: false,
+                ids: vec![],
+            },
+        )
+        .unwrap()
+        .text;
+        assert!(report.contains("Anonymous"));
+        assert!(report.contains("http://judge.example/get"));
+        assert!(report.contains("via"));
+        assert!(!report.contains("fixture-password"));
+    }
 }
 
 #[test]

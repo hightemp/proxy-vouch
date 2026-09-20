@@ -26,6 +26,13 @@ export interface Attempt {
   countryCode: string | null;
   checkUrl: string;
 }
+export interface AnonymityResult {
+  level: "Transparent" | "Anonymous" | "Elite" | "Unknown";
+  message: string;
+  checkUrl: string;
+  observedIp: string | null;
+  proxyHeaders: string[];
+}
 export interface CheckResult {
   status: Status;
   detected: Protocol | null;
@@ -34,6 +41,7 @@ export interface CheckResult {
   totalDurationMs: number;
   exitIp: string | null;
   countryCode: string | null;
+  anonymity: AnonymityResult | null;
   checkedAt: string;
   code: string;
   stage: string;
@@ -81,6 +89,7 @@ export interface Settings {
   fallbackUrl: string;
   ipEcho: boolean;
   countryLookup: boolean;
+  anonymityCheck: boolean;
   expectedStatus: number;
   bodyContains: string;
   concurrency: number;
@@ -129,6 +138,7 @@ export const defaultSettings: Settings = {
   fallbackUrl: "",
   ipEcho: true,
   countryLookup: true,
+  anonymityCheck: true,
   expectedStatus: 200,
   bodyContains: "",
   concurrency: 20,

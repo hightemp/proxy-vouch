@@ -16,11 +16,14 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod anonymity;
+
 /// Per-run cancellation, request pacing and endpoint health, shared by all workers.
 pub struct Control {
     pub cancelled: AtomicBool,
     next_request: Mutex<Instant>,
     endpoints: Mutex<HashMap<String, VecDeque<bool>>>,
+    anonymity: anonymity::Lookup,
     /// Explicit trust anchor used by controlled fixtures; never exposed as a TLS bypass.
     pub ca_file: Option<PathBuf>,
 }
@@ -31,6 +34,7 @@ impl Default for Control {
             cancelled: AtomicBool::new(false),
             next_request: Mutex::new(Instant::now()),
             endpoints: Mutex::new(HashMap::new()),
+            anonymity: anonymity::Lookup::default(),
             ca_file: None,
         }
     }
@@ -295,6 +299,51 @@ fn restrict_socks_auth(easy: &mut Easy2<Response>) -> Result<(), curl::Error> {
     }
 }
 
+fn configure_request(
+    easy: &mut Easy2<Response>,
+    route: Option<(&Proxy, Protocol)>,
+    url: &str,
+    settings: &CheckSettings,
+    control: &Control,
+    deadline: Instant,
+) -> Result<(), curl::Error> {
+    let remaining = deadline.saturating_duration_since(Instant::now());
+    easy.url(url)?;
+    easy.noproxy("")?;
+    easy.follow_location(false)?;
+    easy.connect_timeout(Duration::from_millis(settings.connect_timeout_ms).min(remaining))?;
+    easy.timeout(Duration::from_millis(settings.attempt_timeout_ms).min(remaining))?;
+    easy.ssl_verify_peer(true)?;
+    easy.ssl_verify_host(true)?;
+    easy.proxy_ssl_verify_peer(true)?;
+    easy.proxy_ssl_verify_host(true)?;
+    easy.useragent(concat!("ProxyVouch/", env!("CARGO_PKG_VERSION")))?;
+    easy.accept_encoding("")?;
+    easy.verbose(true)?;
+    if let Some(ca) = &control.ca_file {
+        easy.cainfo(ca)?;
+        easy.proxy_cainfo(&ca.to_string_lossy())?;
+    }
+    if let Some((proxy, protocol)) = route {
+        easy.proxy(&format!("{}://{}", protocol.scheme(), proxy.address()))?;
+        if matches!(protocol, Protocol::Socks5 | Protocol::Socks5h) {
+            restrict_socks_auth(easy)?;
+        }
+        if let Some(credentials) = &proxy.credentials {
+            easy.proxy_username(&credentials.username)?;
+            if let Some(password) = &credentials.password {
+                easy.proxy_password(password)?;
+            }
+            easy.proxy_auth(Auth::new().basic(true))?;
+        }
+    } else {
+        // Only the optional anonymity reference uses the machine's direct route.
+        // An ambient HTTP_PROXY must not turn it into another proxy comparison.
+        easy.proxy("")?;
+    }
+    Ok(())
+}
+
 fn probe(
     proxy: &Proxy,
     protocol: Protocol,
@@ -318,42 +367,14 @@ fn probe(
     }
     let start = Instant::now();
     let mut easy = Easy2::new(Response::default());
-    let setup = (|| -> Result<(), curl::Error> {
-        easy.url(url)?;
-        easy.proxy(&format!("{}://{}", protocol.scheme(), proxy.address()))?;
-        easy.noproxy("")?;
-        easy.follow_location(false)?;
-        easy.connect_timeout(
-            Duration::from_millis(settings.connect_timeout_ms)
-                .min(deadline.saturating_duration_since(start)),
-        )?;
-        easy.timeout(
-            Duration::from_millis(settings.attempt_timeout_ms)
-                .min(deadline.saturating_duration_since(start)),
-        )?;
-        easy.ssl_verify_peer(true)?;
-        easy.ssl_verify_host(true)?;
-        easy.proxy_ssl_verify_peer(true)?;
-        easy.proxy_ssl_verify_host(true)?;
-        easy.useragent(concat!("ProxyVouch/", env!("CARGO_PKG_VERSION")))?;
-        easy.accept_encoding("")?;
-        easy.verbose(true)?;
-        if matches!(protocol, Protocol::Socks5 | Protocol::Socks5h) {
-            restrict_socks_auth(&mut easy)?;
-        }
-        if let Some(ca) = &control.ca_file {
-            easy.cainfo(ca)?;
-            easy.proxy_cainfo(&ca.to_string_lossy())?;
-        }
-        if let Some(credentials) = &proxy.credentials {
-            easy.proxy_username(&credentials.username)?;
-            if let Some(password) = &credentials.password {
-                easy.proxy_password(password)?;
-            }
-            easy.proxy_auth(Auth::new().basic(true))?;
-        }
-        Ok(())
-    })();
+    let setup = configure_request(
+        &mut easy,
+        Some((proxy, protocol)),
+        url,
+        settings,
+        control,
+        deadline,
+    );
     if setup.is_err() {
         return attempt(
             protocol,
@@ -797,6 +818,7 @@ fn check_with_country_url(
         total_duration_ms: started.elapsed().as_millis() as u64,
         exit_ip: None,
         country_code: None,
+        anonymity: None,
         checked_at: chrono::Utc::now().to_rfc3339(),
         code: "PROTOCOL_NOT_DETECTED".into(),
         stage: "protocol".into(),
@@ -852,6 +874,15 @@ fn check_with_country_url(
                     result.exit_ip = country.exit_ip;
                 }
             }
+        }
+    }
+    if settings.anonymity_check && result.status == Status::Working {
+        if let Some(protocol) = result.detected {
+            result.anonymity = Some(
+                control
+                    .anonymity
+                    .check(proxy, protocol, settings, control, deadline),
+            );
         }
     }
     result.total_duration_ms = started.elapsed().as_millis() as u64;
@@ -947,6 +978,7 @@ mod country_tests {
     fn settings() -> CheckSettings {
         CheckSettings {
             url: "http://check.invalid/".into(),
+            anonymity_check: false,
             rate_limit: 100,
             ..CheckSettings::default()
         }

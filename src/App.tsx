@@ -169,6 +169,18 @@ function Country({ code }: { code: string | null | undefined }) {
   );
 }
 
+function Anonymity({ row }: { row: Row }) {
+  const check = row.result?.anonymity;
+  return (
+    <span
+      className="anonymity-tag"
+      title={check?.message ?? "Anonymity not checked"}
+    >
+      {check?.level ?? "—"}
+    </span>
+  );
+}
+
 export default function App() {
   const [rows, setRows] = useState<Row[]>([]);
   const rowMap = useRef(new Map<number, Row>());
@@ -338,6 +350,12 @@ export default function App() {
         return a.status.localeCompare(b.status) || a.id - b.id;
       if (sort === "protocol")
         return a.protocol.localeCompare(b.protocol) || a.id - b.id;
+      if (sort === "anonymity")
+        return (
+          (a.result?.anonymity?.level ?? "ZZZ").localeCompare(
+            b.result?.anonymity?.level ?? "ZZZ",
+          ) || a.id - b.id
+        );
       if (sort === "country")
         return (
           (a.result?.countryCode ?? "ZZZ").localeCompare(
@@ -357,7 +375,7 @@ export default function App() {
       (row) =>
         (filter === "All" || row.status === filter) &&
         (!q ||
-          `${row.address} ${row.username} ${row.label} ${row.result?.countryCode ?? ""}`
+          `${row.address} ${row.username} ${row.label} ${row.result?.countryCode ?? ""} ${row.result?.anonymity?.level ?? ""}`
             .toLowerCase()
             .includes(q)),
     );
@@ -908,13 +926,19 @@ export default function App() {
               PROXY <ArrowUpDown size={12} />
             </button>
             <button onClick={() => setSort("protocol")}>PROTOCOL</button>
+            <button onClick={() => setSort("anonymity")}>ANONYMITY</button>
             <button onClick={() => setSort("status")}>STATUS</button>
             <button onClick={() => setSort("latency")}>
               LATENCY <ArrowUpDown size={12} />
             </button>
             <button onClick={() => setSort("country")}>COUNTRY</button>
-            <span>EXIT IP</span>
-            <button onClick={() => setSort("checked")}>LAST CHECKED</button>
+            <span className="exit-ip-heading">EXIT IP</span>
+            <button
+              className="checked-at-heading"
+              onClick={() => setSort("checked")}
+            >
+              LAST CHECKED
+            </button>
             <span />
           </div>
           {!rows.length ? (
@@ -1026,6 +1050,7 @@ export default function App() {
                           row.protocol.toUpperCase()
                         )}
                       </span>
+                      <Anonymity row={row} />
                       <StatusBadge status={row.status} />
                       <span className="mono latency">
                         {row.result?.latencyMs != null ? (
@@ -1092,6 +1117,7 @@ export default function App() {
                 <option value="address">Address</option>
                 <option value="status">Status</option>
                 <option value="protocol">Protocol</option>
+                <option value="anonymity">Anonymity</option>
                 <option value="country">Country</option>
                 <option value="latency">Fastest first</option>
                 <option value="checked">Recently checked</option>
@@ -1493,6 +1519,24 @@ export default function App() {
               Look up the exit IP through each working proxy using country.is.
               If the lookup fails, the proxy keeps its check result and the
               country is shown as “—”. Disable this to skip the extra request.
+            </p>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={draft.anonymityCheck}
+                onChange={(e) =>
+                  setDraft({ ...draft, anonymityCheck: e.target.checked })
+                }
+              />
+              Check proxy anonymity
+            </label>
+            <p className="hint">
+              Compare a direct HTTP request to httpbingo.org once per run with a
+              request through each working proxy. Reports Transparent,
+              Anonymous, Elite or Unknown from the visible IP and request
+              headers. This measures HTTP traffic only, not anonymity for every
+              use. Disable this to skip both the direct reference and anonymity
+              requests.
             </p>
             <div className="form-grid">
               <label>
@@ -1998,6 +2042,12 @@ export default function App() {
                 </dd>
               </div>
               <div>
+                <dt>Anonymity</dt>
+                <dd>
+                  <Anonymity row={detail} />
+                </dd>
+              </div>
+              <div>
                 <dt>Request latency</dt>
                 <dd>
                   {detail.result?.latencyMs != null
@@ -2014,6 +2064,23 @@ export default function App() {
                 </dd>
               </div>
             </dl>
+            {detail.result?.anonymity && (
+              <div className="result-message anonymity-details">
+                <strong>HTTP anonymity check</strong>
+                <p>{detail.result.anonymity.message}</p>
+                <p>
+                  Observed IP:{" "}
+                  {detail.result.anonymity.observedIp ?? "Not measured"}
+                </p>
+                <p>Check URL: {detail.result.anonymity.checkUrl}</p>
+                {detail.result.anonymity.proxyHeaders.length > 0 && (
+                  <p>
+                    Relevant headers:{" "}
+                    {detail.result.anonymity.proxyHeaders.join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
             {detail.error && <ErrorText error={detail.error.message} />}
             {detail.result && (
               <>

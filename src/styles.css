@@ -526,10 +526,10 @@ h1 {
 .proxy-row {
   display: grid;
   grid-template-columns:
-    23px minmax(155px, 1.6fr) 84px 108px 76px 68px minmax(106px, 1fr)
-    102px 25px;
+    20px minmax(135px, 1.6fr) 76px 94px 100px 60px 60px minmax(90px, 1fr)
+    86px 25px;
   align-items: center;
-  column-gap: 10px;
+  column-gap: 8px;
   padding: 0 21px;
 }
 .table-head {
@@ -550,6 +550,13 @@ h1 {
 .country-flag {
   font-size: 18px;
   line-height: 1;
+}
+.anonymity-tag {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.anonymity-details {
+  margin-bottom: 16px;
 }
 .table-head button {
   padding: 0;
@@ -1371,13 +1378,13 @@ code {
   .table-head,
   .proxy-row {
     grid-template-columns:
-      20px minmax(120px, 1.5fr) 77px 103px 66px 64px minmax(85px, 1fr)
+      20px minmax(120px, 1.5fr) 74px 94px 100px 60px 60px minmax(85px, 1fr)
       24px;
     column-gap: 7px;
     padding-left: 17px;
     padding-right: 17px;
   }
-  .table-head > :nth-child(8),
+  .table-head > .checked-at-heading,
   .proxy-row > .checked-at {
     display: none;
   }
@@ -1419,6 +1426,7 @@ code {
     font-size: 10px;
   }
 }
+
 @media (max-height: 900px) {
   .empty-art {
     display: none;

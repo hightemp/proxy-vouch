@@ -201,6 +201,12 @@ pub fn render(entries: &[Entry], options: &ExportOptions) -> AppResult<Payload> 
             let reports: Vec<_> = selected.iter().map(|e| {
                 let proxy = e.parsed.proxy.as_ref(); let result = e.result.as_ref();
                 let mut value = json!({"id":e.id,"source_name":e.parsed.source,"source_line":e.parsed.line,"label":e.parsed.label,"host":proxy.map(|p|&p.host),"port":proxy.map(|p|p.port),"requested_protocol":proxy.map(|p|p.protocol),"detected_protocol":result.and_then(|r|r.detected),"dns_mode":result.and_then(|r|r.detected).or_else(||proxy.map(|p|p.protocol)).map(Protocol::dns_mode),"authentication":result.map(|r|&r.authentication),"status":e.status,"error_code":e.parsed.error.as_ref().map(|err|&err.code).or_else(||result.map(|r|&r.code)),"error_stage":result.map(|r|&r.stage),"error_message":e.parsed.error.as_ref().map(|err|&err.message).or_else(||result.map(|r|&r.message)),"latency_ms":result.and_then(|r|r.latency_ms),"total_duration_ms":result.map(|r|r.total_duration_ms),"exit_ip":result.and_then(|r|r.exit_ip.as_ref()),"country_code":result.and_then(|r|r.country_code.as_ref()),"checked_at":result.map(|r|&r.checked_at),"profile":result.map(|r|if r.settings.ip_echo {"IP echo"} else {"Custom URL"}),"check_url":result.map(|r|&r.check_url)});
+                let anonymity = result.and_then(|r| r.anonymity.as_ref());
+                value["anonymity"] = json!(anonymity.map(|a| a.level));
+                value["anonymity_message"] = json!(anonymity.map(|a| &a.message));
+                value["anonymity_check_url"] = json!(anonymity.map(|a| &a.check_url));
+                value["anonymity_observed_ip"] = json!(anonymity.and_then(|a| a.observed_ip.as_ref()));
+                value["anonymity_proxy_headers"] = json!(anonymity.map(|a| &a.proxy_headers));
                 if options.credentials {
                     value["username"] = json!(proxy.and_then(|p|p.credentials.as_ref()).map(|a|&a.username));
                     value["password"] = json!(proxy.and_then(|p|p.credentials.as_ref()).and_then(|a|a.password.as_ref()));

@@ -26,6 +26,16 @@ async function previewWithRows(page: Page) {
             totalDurationMs: 35,
             exitIp: `198.51.100.${index + 1}`,
             countryCode,
+            anonymity: {
+              level: index === 0 ? "Elite" : "Transparent",
+              message:
+                index === 0
+                  ? "No additional proxy indicators."
+                  : "The direct IP was visible.",
+              checkUrl: "http://judge.example/get",
+              observedIp: `198.51.100.${index + 1}`,
+              proxyHeaders: index === 0 ? [] : ["x-forwarded-for"],
+            },
             checkedAt: "2026-09-13T10:00:00Z",
             code: "",
             stage: "complete",
@@ -177,6 +187,66 @@ test("country detection can be disabled and the preference survives reload", asy
   await page.reload();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByLabel("Detect proxy country")).not.toBeChecked();
+});
+
+test("anonymity is visible, searchable and explained in proxy details", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1000, height: 650 });
+  await previewWithRows(page);
+  await expect(
+    page.locator(".proxy-row").first().locator(".anonymity-tag"),
+  ).toHaveText("Elite");
+  await expect(
+    page.locator(".proxy-row").nth(1).locator(".anonymity-tag"),
+  ).toHaveText("Transparent");
+  await expect(
+    page.locator(".proxy-row").nth(2).locator(".anonymity-tag"),
+  ).toHaveText("—");
+  await page.getByLabel("Search proxies").fill("Transparent");
+  await expect(page.locator(".proxy-row")).toHaveCount(1);
+  await page
+    .getByLabel("Details for proxy2.example:8080", { exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "proxy2.example:8080" });
+  await expect(
+    dialog.getByText("HTTP anonymity check", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText("The direct IP was visible.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText("Relevant headers: x-forwarded-for"),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByLabel("Search proxies").fill("");
+  await page.getByLabel("Sort proxies").selectOption("anonymity");
+  await expect(
+    page.locator(".proxy-row").last().locator(".anonymity-tag"),
+  ).toHaveText("—");
+});
+
+test("anonymity is enabled by default and disabling it is saved for the next check", async ({
+  page,
+}) => {
+  await previewWithRows(page);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByLabel("Check proxy anonymity")).toBeChecked();
+  await page.getByLabel("Check proxy anonymity").uncheck();
+  await page
+    .getByRole("button", { name: "Save settings", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByLabel("Check proxy anonymity")).not.toBeChecked();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Check all", exact: true }).click();
+  const calls = await page.evaluate<
+    { args: { settings: { anonymityCheck: boolean } } }[]
+  >("window.testCalls.filter(call => call.command === 'start_check')");
+  expect(calls).toHaveLength(1);
+  expect(calls[0].args.settings.anonymityCheck).toBe(false);
 });
 
 test("browser preview makes the desktop requirement clear", async ({

@@ -73,6 +73,19 @@ The default check requests an IP echo endpoint over HTTPS. Settings also support
 
 **Detect proxy country** is enabled by default in Settings. After a successful check, an HTTPS request to [country.is](https://country.is/) through the same proxy looks up the measured exit IP (or the caller IP for custom checks). The list and row details show a flag and two-letter country code; you can sort by country or search its code. The lookup uses the run's request pacing and remaining deadline, with a maximum of five seconds. If it fails, the country is shown as `—` and the availability result stays unchanged. Turn the setting off to skip this extra request on subsequent runs. Country data is saved with results and included in CSV/JSON reports and backups.
 
+**Check proxy anonymity** is also enabled by default. After a successful availability check, ProxyVouch compares one direct HTTP request per run with requests through the working proxies, using [httpbingo.org](https://httpbingo.org/). The direct reference explicitly bypasses HTTP/HTTPS proxy environment variables; VPN routing still applies. Disabling the setting skips both the direct reference and the proxied anonymity requests. Each lookup has a five-second limit within a ten-second anonymity budget and the remaining total check deadline. Requests share the run's pacing; lookup failures preserve the availability result and its latency.
+
+The **Anonymity** column can be sorted and searched. Details explain the result, show the IP observed by the HTTP check and list relevant header names. Results are preserved in the saved workspace, backups and CSV/JSON reports.
+
+| Anonymity | HTTP observation |
+| --- | --- |
+| Transparent | The measured direct IP appears in the origin or echoed request headers |
+| Anonymous | The measured direct IP is absent, but additional proxy indicators are visible |
+| Elite | Neither the measured direct IP nor additional proxy indicators were observed |
+| Unknown | The reference or lookup failed, the response was invalid, or the IP families cannot be reliably compared |
+
+The judge's own forwarding headers are compared against the direct reference to avoid treating its infrastructure as evidence of a proxy. Anonymity uses HTTP forwarding because a CONNECT tunnel conceals proxy-added HTTP headers. It describes that request only: HTTPS, other destinations, changing IP addresses and other forms of identification can behave differently. Existing HTTP/HTTPS/SOCKS protocol detection remains separate.
+
 | Status | Meaning |
 | --- | --- |
 | Working | A real request passed the selected profile |
