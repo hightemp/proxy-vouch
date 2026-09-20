@@ -16,7 +16,7 @@
 
 A local desktop proxy checker built with Tauri, Rust and React. Import a mixed list, verify real requests through each proxy, and copy or save the results.
 
-![ProxyVouch main window with the proxy list and check results](screenshots/2026-09-06_12-15.png)
+![ProxyVouch main window with the proxy list and check results](screenshots/2026-09-20_20-27.png)
 
 ## Run the application
 
