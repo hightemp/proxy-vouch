@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { parseVersion, readVersion, synchronizeVersion } from "../version.mjs";
 import {
@@ -344,9 +345,11 @@ test("upload failures leave drafts unpublished and published releases are immuta
           return { status: 1, stderr: "upload failed" };
         },
       ),
-    /remains a draft/,
+    /could not be verified remotely/,
   );
-  assert.deepEqual(calls, ["view", "upload"]);
+  assert.equal(calls[0], "view");
+  assert.equal(calls[1], "upload");
+  assert.equal(calls.length, 3);
   assert.throws(
     () =>
       publishGithubRelease(
@@ -358,6 +361,185 @@ test("upload failures leave drafts unpublished and published releases are immuta
       ),
     /already published/,
   );
+});
+
+function remoteRelease(root, directory, draft) {
+  return {
+    tag_name: "v0.1.0",
+    draft,
+    prerelease: false,
+    name: "ProxyVouch v0.1.0",
+    body: fs.readFileSync(
+      path.join(root, "artifacts/release-notes.md"),
+      "utf8",
+    ),
+    assets: fs.readdirSync(directory).map((name) => {
+      const bytes = fs.readFileSync(path.join(directory, name));
+      return {
+        name,
+        size: bytes.length,
+        digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+        state: "uploaded",
+      };
+    }),
+  };
+}
+
+for (const stage of ["create", "upload", "edit"]) {
+  test(`a failed ${stage} response is accepted only when the operation exists remotely`, (t) => {
+    const { root } = fixture(t);
+    git(root, "tag", "v0.1.0");
+    const directory = assets(root, "0.1.0");
+    const calls = [];
+    const url = publishGithubRelease(
+      root,
+      "example/proxy-vouch",
+      "v0.1.0",
+      directory,
+      (_, args) => {
+        calls.push(args);
+        if (args[0] === "api")
+          return {
+            status: 0,
+            stdout: JSON.stringify(
+              remoteRelease(root, directory, stage !== "edit"),
+            ),
+          };
+        if (args[1] === "view")
+          return { status: 1, stderr: "release not found" };
+        return args[1] === stage
+          ? { status: 1, stderr: "HTTP 500: Internal Server Error" }
+          : { status: 0, stdout: "" };
+      },
+    );
+    assert.equal(
+      url,
+      "https://github.com/example/proxy-vouch/releases/tag/v0.1.0",
+    );
+    assert.equal(calls.filter((args) => args[0] === "api").length, 1);
+    assert.equal(calls.filter((args) => args[1] === stage).length, 1);
+    assert.deepEqual(
+      calls.filter((args) => args[0] === "release").map((args) => args[1]),
+      ["view", "create", "upload", "edit"],
+    );
+  });
+}
+
+test("publication recovery rejects mismatched metadata and incomplete or different assets", (t) => {
+  const { root } = fixture(t);
+  git(root, "tag", "v0.1.0");
+  const directory = assets(root, "0.1.0");
+  for (const change of [
+    (r) => {
+      r.draft = true;
+    },
+    (r) => {
+      r.tag_name = "v9.0.0";
+    },
+    (r) => {
+      r.prerelease = true;
+    },
+    (r) => {
+      r.name = "Another release";
+    },
+    (r) => {
+      r.body = "Different notes";
+    },
+    (r) => {
+      r.assets.pop();
+    },
+    (r) => {
+      r.assets[0].digest = "sha256:wrong";
+    },
+    (r) => {
+      r.assets[0].size += 1;
+    },
+    (r) => {
+      r.assets[0].state = "open";
+    },
+    (r) => {
+      delete r.assets[0].digest;
+    },
+  ]) {
+    assert.throws(
+      () =>
+        publishGithubRelease(
+          root,
+          "example/proxy-vouch",
+          "v0.1.0",
+          directory,
+          (_, args) => {
+            if (args[0] === "api") {
+              const release = remoteRelease(root, directory, false);
+              change(release);
+              return { status: 0, stdout: JSON.stringify(release) };
+            }
+            if (args[1] === "view")
+              return { status: 0, stdout: JSON.stringify({ isDraft: true }) };
+            return args[1] === "edit"
+              ? { status: 1, stderr: "HTTP 500" }
+              : { status: 0, stdout: "" };
+          },
+        ),
+      /could not be verified remotely/,
+    );
+  }
+});
+
+test("an incomplete upload is never followed by publication", (t) => {
+  const { root } = fixture(t);
+  git(root, "tag", "v0.1.0");
+  const directory = assets(root, "0.1.0");
+  const calls = [];
+  assert.throws(
+    () =>
+      publishGithubRelease(
+        root,
+        "example/proxy-vouch",
+        "v0.1.0",
+        directory,
+        (_, args) => {
+          calls.push(args[0] === "api" ? "api" : args[1]);
+          if (args[0] === "api") {
+            const release = remoteRelease(root, directory, true);
+            release.assets.pop();
+            return { status: 0, stdout: JSON.stringify(release) };
+          }
+          if (args[1] === "view")
+            return { status: 0, stdout: JSON.stringify({ isDraft: true }) };
+          return { status: 1, stderr: "HTTP 500" };
+        },
+      ),
+    /could not be verified remotely/,
+  );
+  assert.deepEqual(calls, ["view", "upload", "api"]);
+});
+
+test("unreadable recovery responses fail without exposing command output", (t) => {
+  const { root } = fixture(t);
+  git(root, "tag", "v0.1.0");
+  const directory = assets(root, "0.1.0");
+  const calls = [];
+  assert.throws(
+    () =>
+      publishGithubRelease(
+        root,
+        "example/proxy-vouch",
+        "v0.1.0",
+        directory,
+        (_, args) => {
+          calls.push(args[0] === "api" ? "api" : args[1]);
+          if (args[0] === "api") return { status: 0, stdout: "invalid JSON" };
+          if (args[1] === "view")
+            return { status: 1, stderr: "release not found" };
+          return { status: 1, stderr: "HTTP 500 synthetic-secret-output" };
+        },
+      ),
+    (error) =>
+      /HTTP 500/.test(error.message) &&
+      !error.message.includes("synthetic-secret-output"),
+  );
+  assert.deepEqual(calls, ["view", "create", "api"]);
 });
 
 test("a dash in build metadata does not mark a stable release as prerelease", (t) => {

@@ -74,6 +74,8 @@ Platform builds run on native runners. See [GitHub's runner reference](https://d
 
 Every matrix job runs Rust tests and builds its packages with the locked dependencies. Artifacts get unique version/platform names. The publishing job starts only when all builds succeed and requires all five packages, including AppImage. It calculates SHA256SUMS, creates or resumes a draft, uploads the complete artifact set and then makes the release public. If an upload fails, the release stays a draft. Already published releases are not overwritten.
 
+If GitHub returns an error after creating a draft, uploading assets or publishing, the publisher checks the remote state before failing. Upload recovery requires every expected filename, size and SHA-256 digest; publication recovery also requires the expected tag, public status, title, notes and prerelease flag. An unverified or partial operation still stops the workflow. Existing public releases remain protected against overwrites.
+
 The macOS bundle uses ad-hoc signing; Apple notarization and a trusted Windows publisher signature are not configured. This workflow does not establish completed GUI acceptance on Windows/macOS before it has run there.
 
 No real tag, remote push or GitHub release is needed to test the release scripts:
